@@ -1,0 +1,198 @@
+contextual question rewriting.
+
+Example:
+
+```text
+User:
+What is my bill?
+
+Assistant:
+Your bill is ₹2,400.
+
+User:
+Why is it high?
+
+```
+
+The rewriter should produce:
+
+```text
+Why is my BESCOM residential electricity bill
+₹2,400 this month?
+```
+
+Another:
+
+```text
+User:
+Can I use solar?
+
+```
+
+The rewriter should preserve context:
+
+```text
+Can this BESCOM residential connection
+benefit from rooftop solar based on
+its recent electricity consumption?
+```
+
+But do not invent facts.
+
+---
+
+# 32. TOOL ROUTING
+
+Do not route everything to web search.
+
+Example:
+
+```text
+"What is my consumption?"
+        ↓
+Bill analysis tool
+
+"Why did my bill increase?"
+        ↓
+Consumption analysis tool
+
+"Am I eligible for Gruha Jyothi?"
+        ↓
+Gruha Jyothi tool
+
+"Can I install solar?"
+        ↓
+Solar analysis tool
+
+"Can our apartment use VNM?"
+        ↓
+VNM analysis tool
+
+"What is the latest VNM rule?"
+        ↓
+Official-source web search
+```
+
+This is the agent architecture I want to learn.
+
+---
+
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python architecture with familiar concepts such as:
+
+```text
+Controller
+Service
+Repository
+Domain
+Dependency Injection
+Configuration
+```
+
+This will help me transfer my Java/Spring knowledge to Python.
+
+---
+
+# 36. TESTING
+
+Every important deterministic component must have tests.
+
+At minimum:
+
+```text
+test_bill_validation
+test_category_classification

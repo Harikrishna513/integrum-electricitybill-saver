@@ -1,0 +1,79 @@
+# Group Net Metering (GNM) preliminary analysis rules — Milestone 17.
+#
+# Source: Common SOP VNM_GNM 12.05.2026 + KERC order 09.07.2025 (gist).
+# Time-sensitive — re-check official BESCOM SRTPV / KERC docs before production.
+#
+# PRELIMINARY ANALYSIS ONLY — never approval / sanction / PPA.
+
+rule_version: GNM_BESCOM_SOP_2026_05_12_BOOTSTRAP
+discom: BESCOM
+arrangement: GROUP_NET_METERING
+effective_from: "2025-07-09"
+effective_to: null
+verification_status: REQUIRES_VERIFICATION
+source: Common SOP VNM_GNM 12.05.2026 + KERC tariff order 09.07.2025 (gist)
+source_url: https://srtpv.bescom.org/SRTPV/document/Common%20SOP%20VNM_GNM%2012.05.2026.pdf
+source_notes: >
+  GNM = surplus from a plant at one of a consumer's installations adjusted to
+  other installations of the SAME NAME and SAME CATEGORY within the licensee area.
+  Host connection must consume at least 20% of monthly generation; unused portion
+  of that 20% lapses. Credits follow declared priority order.
+
+eligibility:
+  # SOP: consumers of all categories may install under GNM.
+  # v1 ₹ math still uses DOMESTIC TariffEngine only.
+  all_categories_eligible: true
+  min_participating_installations: 2
+  require_same_category: true
+  require_same_consumer_name: true
+  require_same_discom_area_declared: true
+
+plant:
+  min_kwp: 5.0
+  max_equals_combined_sanctioned_load: true
+
+host_rule:
+  # SOP: source connection shall consume at least 20% of generation in a billing month.
+  # Unused portion of that 20% is lapsed energy (not transferred to other RRs).
+  min_host_consumption_fraction_of_generation: 0.20
+  host_rule_note: >
+    Equivalent units out of the reserved 20% that are not consumed at the source
+    connection are treated as lapsed energy (SOP gist).
+
+priority:
+  # Credits after the host reserved band are applied in ascending priority (1 = first).
+  change_note: >
+    Priority may be changed once at the beginning of a financial year with two
+    months' advance notice (per SOP gist) — confirm officially.
+
+generation_defaults:
+  specific_yield_kwh_per_kwp_year: 1480
+
+settlement:
+  excess_purchase_fraction_of_generic: 0.75
+  generic_tariff_ground_or_dspv_inr_per_kwh: 3.66
+  generic_tariff_verification_status: REQUIRES_VERIFICATION
+  generic_tariff_note: >
+    Bootstrap generic ₹/kWh for excess-purchase math only. Confirm KERC generic
+    tariff applicable on as_of.
+  open_access_note: >
+    Same DT / same 11 kV feeder may be exempt from OA charges; different feeders
+    may attract OA charges — not computed here; flag only.
+  technical_feasibility_note: >
+    Technical feasibility is performed by BESCOM officers per SOP scenarios.
+    This app never clears it.
+
+user_messages:
+  never_approval: >
+    Preliminary GNM analysis only — not BESCOM approval, sanction, PPA, or
+    technical feasibility clearance.
+  potentially_suitable: >
+    Inputs appear consistent with published GNM pre-screen checks. Official
+    feasibility, PPA, and metering still required via BESCOM SRTPV.
+  potentially_unsuitable: >
+    One or more published GNM pre-screen checks failed under current assumptions.
+  insufficient: >
+    Missing inputs prevent a complete GNM pre-screen.
+  technical_verification: >
+    Pre-screen passed basic numeric checks, but technical feasibility / OA /
+    metering must be verified officially by BESCOM.

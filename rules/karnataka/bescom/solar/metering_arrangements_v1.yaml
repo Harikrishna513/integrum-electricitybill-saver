@@ -1,0 +1,103 @@
+# Metering arrangement concepts + settlement bootstrap — Milestone 15.
+#
+# PURPOSE
+#   Teach and estimate Net vs Gross metering settlement for individual rooftop.
+#   VNM / GNM are defined here as CONCEPTS only (engines in Milestones 16 / 17).
+#
+# verification_status is cautious: confirm against latest KERC SRTPV/DSPV orders
+# and the consumer's actual PPA before treating ₹ as advisory truth.
+
+rule_version: METERING_ARRANGEMENTS_BESCOM_V1_BOOTSTRAP
+discom: BESCOM
+effective_from: "2024-04-01"
+effective_to: null
+verification_status: REQUIRES_VERIFICATION
+source: Bootstrap from public KERC SRTPV orders + BESCOM SRTPV PPA settlement wording
+source_notes: >
+  Typical net-metering commercial pattern in BESCOM PPA materials:
+  bi-directional meter with import/export registers; if import > export the
+  consumer pays retail tariff for net import; if export > import BESCOM pays
+  for net export at the PPA/generic tariff (after adjusting fixed charges /
+  electricity duty as applicable). Export ₹/kWh below are bootstrap planning
+  figures from public KERC domestic SRTPV tariff discussions and MUST be
+  re-checked against the consumer's PPA and the order in force on as_of.
+
+concepts:
+  NET_METERING:
+    label: Net Metering
+    summary: >
+      One consumer, plant on their premises, bi-directional meter. Monthly
+      settlement uses import and export registers. Net import is billed at
+      retail tariff; net export is credited/paid at PPA/generic solar tariff.
+    scope: individual_rooftop
+    implementation_status: IMPLEMENTED_ESTIMATE
+    diagram: |
+      Solar → Consumer load (self-use)
+            ↘ Grid export
+      Grid import → Consumer load
+  GROSS_METERING:
+    label: Gross Metering
+    summary: >
+      Generation is measured and sold to the DISCOM at the applicable solar
+      tariff. Consumption is billed separately at full retail tariff. No
+      unit-for-unit retail offset.
+    scope: individual_rooftop
+    implementation_status: IMPLEMENTED_ESTIMATE
+    diagram: |
+      Solar → Grid (sold at solar tariff)
+      Grid → Consumer (full retail bill)
+  VIRTUAL_NET_METERING:
+    label: Virtual Net Metering (VNM)
+    summary: >
+      One solar plant's exported energy is allocated as credits across multiple
+      participating service connections (same eligible category), typically for
+      apartments / communities without individual roof rights.
+    scope: multi_consumer
+    implementation_status: IMPLEMENTED_ESTIMATE
+    diagram: |
+      Solar plant → Grid → credit split → Flat A / Flat B / Flat C
+  GROUP_NET_METERING:
+    label: Group Net Metering (GNM)
+    summary: >
+      Surplus from one connection can offset other connections of the same
+      consumer (e.g. same name / eligible grouping) under GNM rules.
+    scope: multi_rr_same_consumer
+    implementation_status: IMPLEMENTED_ESTIMATE
+    diagram: |
+      RR-1 solar surplus → credit → RR-2 / RR-3 (same consumer group)
+
+settlement:
+  # For teaching register realism when only monthly C and G are known.
+  # Monthly net energy (import - export) always equals C - G (ignoring losses).
+  default_coincidence_fraction: 1.0
+  coincidence_note: >
+    coincidence_fraction models daytime overlap. f=1 ≈ classic monthly net
+    (self-use = min(C,G)). f<1 raises both import and export registers while
+    keeping import - export = C - G.
+  # Fixed charges remain even when net import is 0 — TariffEngine(0) still
+  # includes fixed/tax lines under the retail rule.
+  export_credit_applies_when: net_export_positive
+  retail_bill_units: max_of_zero_and_net_import
+
+export_tariffs_inr_per_kwh:
+  # Bootstrap domestic 1–10 kWp figures from public KERC SRTPV tariff materials.
+  # Pick with_cfa vs without_cfa based on whether CFA is assumed availed.
+  domestic_1_to_10_kwp:
+    without_cfa: 4.50
+    with_cfa: 2.97
+    verification_status: REQUIRES_VERIFICATION
+    note: Confirm against PPA signed tariff and the KERC order applicable on as_of.
+
+user_messages:
+  estimate_only: >
+    Estimated metering settlement only — not an official BESCOM bill or PPA
+    settlement. Confirm export tariff against your signed PPA.
+  vnm_later: >
+    Use POST /vnm/analyze for preliminary VNM analysis (Milestone 16).
+    This /metering/settle endpoint does not run multi-consumer VNM math.
+  gnm_later: >
+    Use POST /gnm/analyze for preliminary GNM analysis (Milestone 17).
+    This /metering/settle endpoint does not run multi-RR GNM math.
+  fixed_charges_remain: >
+    Even with zero net import, retail fixed charges (and related lines) may
+    still apply under the retail tariff rule.

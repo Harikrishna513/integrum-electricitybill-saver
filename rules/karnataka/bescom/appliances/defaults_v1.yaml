@@ -1,0 +1,42 @@
+# Default appliance power / usage assumptions for Bengaluru domestic homes.
+# ESTIMATES ONLY — not end-use metered data.
+
+catalog_version: APPLIANCE_DEFAULTS_BESCOM_DOMESTIC_V1
+verification_status: ESTIMATE_DEFAULTS_ONLY
+notes: >
+  Values are typical planning defaults for learning and first-pass estimates.
+  Always label outputs as Estimated / Approximate / Based on assumptions.
+
+defaults:
+  days_per_month: 30
+  lighting_and_misc_kwh: 25
+  people_misc_kwh_per_person: 8
+
+appliances:
+  ac:
+    default_watts: 1500
+    default_hours_per_day: 6
+  geyser:
+    default_watts: 2000
+    default_hours_per_day: 1
+  refrigerator:
+    default_watts: 150
+    # fridges are often modeled as always-on with duty cycle ~1/3
+    default_hours_per_day: 8
+  washing_machine:
+    default_watts: 500
+    default_hours_per_day: 0.5
+  fan:
+    default_watts: 75
+    default_hours_per_day: 10
+  water_pump:
+    default_watts: 750
+    default_hours_per_day: 0.5
+  induction:
+    default_watts: 2000
+    default_hours_per_day: 1
+  ev_2w:
+    # rough home charging estimate
+    default_kwh_per_day: 1.5
+  ev_4w:
+    default_kwh_per_day: 6.0

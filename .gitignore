@@ -1,0 +1,104 @@
+# ---------------------------------------------------------------------------
+# Secrets / env — NEVER commit real keys (keep *.example templates)
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!**/.env.example
+!frontend/.env.local.example
+*.pem
+credentials.json
+**/credentials*.json
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------------------
+# Node / Next.js frontend
+# ---------------------------------------------------------------------------
+node_modules/
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---------------------------------------------------------------------------
+# IDE / OS
+# ---------------------------------------------------------------------------
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# ---------------------------------------------------------------------------
+# Runtime DB + uploads (PII)
+# ---------------------------------------------------------------------------
+data/uploads/
+!data/uploads/.gitkeep
+data/*.db
+*.db
+*.sqlite
+*.sqlite3
+
+# ---------------------------------------------------------------------------
+# Sample / personal bill images (PII — do not push)
+# ---------------------------------------------------------------------------
+data/bes-bills/
+data/random/
+data/bills/
+*.jpg
+*.jpeg
+*.png
+*.webp
+!tests/fixtures/**
+
+# ---------------------------------------------------------------------------
+# Official / copyrighted docs — local only (RAG corpus on disk)
+# Keep short digests if you author them; block PDF + OCR dumps.
+# ---------------------------------------------------------------------------
+data/Docs/*.pdf
+data/Docs/*.PDF
+data/Docs/_extracted*
+data/Docs/*.docx
+data/Docs/*.DOCX
+# Uncomment the next line to ignore ALL of data/Docs (including digests):
+# data/Docs/**
+
+# Global binary docs (extra safety)
+*.pdf
+*.PDF
+
+# Keep empty folder markers
+!data/.gitkeep
+!data/uploads/.gitkeep
+!data/Docs/.gitkeep
+
+# ---------------------------------------------------------------------------
+# Logs / temp
+# ---------------------------------------------------------------------------
+*.log
+logs/
+tmp/
+temp/
+*.tmp

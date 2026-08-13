@@ -1,0 +1,47 @@
+# BOOTSTRAP tariff rule for learning the versioned engine.
+#
+# verification_status: UNVERIFIED_HYPOTHESIS
+# DO NOT treat these rates as official BESCOM/KERC tariffs.
+# Replace / add a new versioned file after reading the applicable KERC tariff order.
+#
+# When tariffs change: add a NEW file (do not overwrite this one).
+
+rule_version: BESCOM_LT1_DOMESTIC_BOOTSTRAP_2024_04
+state: Karnataka
+discom: BESCOM
+category: DOMESTIC
+tariff_codes:
+  - LT-1
+  - LT1
+effective_from: "2024-04-01"
+effective_to: "2025-03-31"
+verification_status: UNVERIFIED_HYPOTHESIS
+source: internal_bootstrap_pending_kerc_verification
+notes: >
+  Illustrative telescopic domestic structure for Milestone 10 unit tests and
+  architecture learning only. Confirm all numbers against the official KERC
+  tariff order before any consumer-facing financial advice.
+
+energy:
+  model: telescopic_slabs
+  unit: kWh
+  slabs:
+    - up_to: 30
+      rate_per_kwh: 4.10
+    - up_to: 100
+      rate_per_kwh: 5.55
+    - up_to: 200
+      rate_per_kwh: 7.10
+    - up_to: null   # remaining units
+      rate_per_kwh: 8.15
+
+fixed_charge:
+  model: per_kw_month
+  rate_per_kw: 100.0
+  minimum_kw: 1.0
+
+electricity_tax:
+  model: percent_of_energy_plus_fixed
+  percent: 6.0
+
+surcharges: []

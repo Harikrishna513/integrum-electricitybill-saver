@@ -1,0 +1,66 @@
+# Gruha Jyothi scheme rule — versioned for Milestone 11.
+#
+# Core entitlement idea is documented in BESCOM Gruha Jyothi FAQ materials:
+#   free units based on FY 2022-23 average + 10%, remaining under 200 units.
+#
+# verification_status is intentionally cautious:
+#   Confirm against the latest official BESCOM/GoK FAQ and government orders
+#   before treating as final regulatory truth.
+
+rule_version: GRUHA_JYOTHI_KA_V1_BOOTSTRAP
+state: Karnataka
+scheme_name: Gruha Jyothi
+effective_from: "2023-08-01"
+effective_to: null
+verification_status: PARTIALLY_DOCUMENTED_PENDING_RECHECK
+source: BESCOM_Gruha_Jyothi_FAQ_and_GoK_scheme_materials
+source_notes: >
+  Entitlement concept (FY 2022-23 average + 10%, under 200 units) is widely
+  documented via BESCOM FAQ references. Always re-check the latest official
+  FAQ/order before production claims. This engine never grants approval.
+
+eligible_categories:
+  - DOMESTIC
+
+baseline:
+  type: fy_average
+  financial_year: "2022-23"
+  description: Average monthly consumption for FY 2022-23
+
+entitlement:
+  model: baseline_plus_percent_capped
+  percent_uplift: 10.0
+  hard_cap_units: 200
+  # Some public explainers mention a small flat uplift for very low baselines.
+  # Left disabled until confirmed against the official FAQ wording you adopt.
+  low_baseline_flat_uplift:
+    enabled: false
+    baseline_below_units: 90
+    flat_extra_units: 10
+
+billing_effect:
+  description: >
+    If current monthly consumption is within entitled free units, energy charges
+    for those units may be zero under the scheme (subject to official rules and
+    enrollment). This app only estimates unit coverage; it does not approve claims.
+
+required_inputs_for_entitlement:
+  - category
+  - baseline_fy_2022_23_avg_units
+
+optional_inputs:
+  - current_units
+  - subsidy_line_seen_on_bill
+  - consumer_declares_enrolled
+
+user_messages:
+  insufficient_baseline: >
+    Gruha Jyothi entitlement needs your FY 2022-23 average monthly consumption.
+    One recent bill is not enough to invent that baseline. Enter the official
+    baseline/entitlement from BESCOM/Seva Sindhu, or provide FY 2022-23 average.
+  not_domestic: >
+    Gruha Jyothi applies to residential/domestic connections. This bill category
+    does not appear domestic.
+  never_approval: >
+    This is a preliminary conditions check only. Confirm eligibility and
+    enrollment through official BESCOM / Seva Sindhu processes.

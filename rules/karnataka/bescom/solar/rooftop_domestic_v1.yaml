@@ -1,0 +1,81 @@
+# Individual rooftop solar planning defaults — Milestone 14.
+#
+# ESTIMATES / BOOTSTRAP ONLY.
+# verification_status is intentionally cautious: confirm against latest
+# BESCOM SRTPV portal, KERC SRTPV orders, and PM Surya Ghar CFA tables
+# before production claims.
+#
+# Milestone 15 models net metering billing more carefully (see metering_arrangements_v1.yaml).
+# Milestone 16/17 cover VNM/GNM (apartments / multi-RR).
+
+rule_version: SRTPV_DOMESTIC_BESCOM_V1_BOOTSTRAP
+discom: BESCOM
+category: DOMESTIC
+effective_from: "2024-04-01"
+effective_to: null
+verification_status: REQUIRES_VERIFICATION
+source: Bootstrap from public Karnataka/BESCOM/KERC/MNRE planning references
+source_notes: >
+  Specific yield ~1450-1520 kWh/kWp/year is commonly cited for Bengaluru-region
+  rooftop studies. Capital cost ~₹50,000/kWp aligns with a KERC domestic SRTPV
+  benchmark discussion — vendor quotes vary. CFA slabs below mirror widely
+  published PM Surya Ghar residential CFA structure and MUST be re-checked
+  on the official national/BESCOM portals before advising consumers.
+
+generation:
+  # Approximate annual AC energy per installed kWp for Bengaluru region.
+  specific_yield_kwh_per_kwp_year: 1480
+  days_per_month: 30
+
+sizing:
+  # Target fraction of annual consumption to offset before caps.
+  target_offset_fraction: 0.85
+  # Typical module + access spacing planning figure.
+  roof_m2_per_kwp: 10.0
+  # Domestic plant often limited vs sanctioned load — confirm current BESCOM SOP.
+  max_kwp_vs_sanctioned_load_ratio: 1.0
+  min_kwp: 1.0
+  max_kwp: 10.0
+  step_kwp: 0.5
+  # If no usable roof area, do not invent a plant — point to VNM later.
+  require_roof_for_recommendation: true
+
+economics:
+  # Gross installed cost assumption (₹/kWp), inclusive of typical taxes — estimate.
+  capital_cost_inr_per_kwp: 50000
+  system_life_years: 25
+  # Simple M14 offset model: generation reduces billed units 1:1 up to usage.
+  # Real net-metering export/import settlement is Milestone 15.
+  bill_offset_model: simple_min_of_generation_and_consumption
+  offset_model_note: >
+    Milestone 14 uses a simplified bill-offset model. It is NOT full BESCOM
+    net-metering settlement (export banking, charges, etc.).
+
+cfa_pm_surya_ghar:
+  enabled: true
+  scheme_name: PM Surya Ghar Muft Bijli Yojana (residential CFA)
+  verification_status: REQUIRES_VERIFICATION
+  # Published residential CFA structure (confirm officially):
+  #   first 2 kWp: ₹30,000 / kWp
+  #   next 1 kWp (up to 3 kWp total): ₹18,000 / kWp
+  #   above 3 kWp: no additional CFA under this table
+  slabs:
+    - up_to_kwp: 2.0
+      inr_per_kwp: 30000
+    - up_to_kwp: 3.0
+      inr_per_kwp: 18000
+  max_cfa_kwp: 3.0
+  notes: >
+    CFA eligibility depends on DCR modules, portal registration, vendor
+    empanelment, and BESCOM SRTPV process. This engine never claims approval.
+
+user_messages:
+  estimate_only: >
+    Estimated / approximate rooftop solar planning only — based on stated
+    assumptions. Not a vendor quote, BESCOM sanction, or CFA approval.
+  no_roof: >
+    No usable roof area provided. Individual rooftop sizing is not recommended.
+    Apartment / no-roof paths belong to Virtual Net Metering (Milestone 16).
+  net_metering_later: >
+    Milestone 14 simple offset remains available via /solar/analyze.
+    Prefer /metering/settle for Net vs Gross settlement estimates (Milestone 15).

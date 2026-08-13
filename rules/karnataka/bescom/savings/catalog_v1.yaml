@@ -1,0 +1,73 @@
+# Behavioral / simple savings recommendation catalog (Milestone 12).
+# These are ESTIMATE templates with explicit default assumptions.
+# Milestone 13 will refine with user appliance questionnaire answers.
+
+catalog_version: SAVINGS_CATALOG_BESCOM_DOMESTIC_V1
+discom: BESCOM
+category: DOMESTIC
+verification_status: ESTIMATE_TEMPLATES_ONLY
+notes: >
+  Defaults are educational assumptions, not measured household data.
+  Always show assumptions next to any ₹ figure.
+
+recommendations:
+  - id: geyser_reduce_runtime
+    title: Reduce geyser / water heater runtime
+    category: behavior
+    impact: high
+    formula: kwh = power_kw * hours_per_day * days_per_month * reduction_fraction
+    default_assumptions:
+      power_kw: 2.0
+      hours_per_day: 1.0
+      days_per_month: 30
+      reduction_fraction: 0.5
+    tips:
+      - Use a timer
+      - Heat only what you need
+      - Avoid leaving geyser ON
+    notes: Estimate only — not a measured geyser meter reading.
+
+  - id: ac_raise_temperature
+    title: Raise AC setpoint / reduce AC hours
+    category: behavior
+    impact: high
+    formula: kwh = power_kw * hours_per_day * days_per_month * reduction_fraction
+    default_assumptions:
+      power_kw: 1.5
+      hours_per_day: 6.0
+      days_per_month: 30
+      reduction_fraction: 0.2
+    tips:
+      - Prefer 24–26°C
+      - Clean filters
+      - Use fans with AC
+    notes: AC savings vary strongly by weather and building.
+
+  - id: replace_fans_bldc
+    title: Replace conventional fans with BLDC fans
+    category: appliance_swap
+    impact: medium
+    formula: kwh = fan_count * (old_watts - new_watts)/1000 * hours_per_day * days_per_month
+    default_assumptions:
+      fan_count: 3
+      old_watts: 75
+      new_watts: 35
+      hours_per_day: 10
+      days_per_month: 30
+    tips:
+      - Replace most-used fans first
+    notes: Capex not included in monthly operating saving.
+
+  - id: fridge_efficient_use
+    title: Refrigerator efficiency habits
+    category: behavior
+    impact: low
+    formula: kwh = monthly_fridge_kwh * reduction_fraction
+    default_assumptions:
+      monthly_fridge_kwh: 45
+      reduction_fraction: 0.1
+    tips:
+      - Do not overcool
+      - Keep coils clean
+      - Minimize door open time
+    notes: Rough behavioral estimate.

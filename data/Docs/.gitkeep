@@ -1,0 +1,9 @@
+# Official docs live here locally for RAG (Milestone 20).
+#
+# Do NOT commit copyrighted PDFs or OCR dumps — they are gitignored.
+# Place files yourself after clone, for example:
+#   KSEC regulations.pdf
+#   VNM_GNM_official_digest.md   (optional authored digest — OK to commit)
+#   net_metering_digest.md
+#
+# See README.md → Official docs corpus

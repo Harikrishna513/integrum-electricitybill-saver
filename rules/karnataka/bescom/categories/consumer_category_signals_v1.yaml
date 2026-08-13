@@ -1,0 +1,79 @@
+# Bootstrap category-signal rules for BESCOM bill classification (Milestone 5).
+#
+# IMPORTANT:
+#   verification_status = UNVERIFIED_HYPOTHESIS
+#   Do NOT treat these tariff-code mappings as final regulatory truth until
+#   checked against the applicable KERC tariff order for the bill period.
+#
+# Official sources to verify later:
+#   - KERC tariff orders
+#   - BESCOM published tariff schedules
+#
+# This file is versioned. Do not overwrite in place when rules change —
+# add a new file / new rule_version instead.
+
+rule_version: CATEGORY_SIGNALS_BESCOM_V1
+state: Karnataka
+discom: BESCOM
+effective_from: "2025-01-01"
+effective_to: null
+verification_status: UNVERIFIED_HYPOTHESIS
+source: internal_bootstrap_pending_kerc_verification
+notes: >
+  Keyword and tariff-pattern signals used only for preliminary classification.
+  App v1 processes DOMESTIC only. Conflicts must not be auto-resolved.
+
+supported_categories_v1:
+  - DOMESTIC
+
+# Text found in consumer_category / description fields (case-insensitive contains)
+text_keywords:
+  DOMESTIC:
+    - domestic
+    - residential
+    - ae h
+    - aeh
+    - home
+    - household
+  COMMERCIAL:
+    - commercial
+    - non-domestic
+    - non domestic
+    - shop
+    - business
+  EDUCATIONAL:
+    - educational
+    - education
+    - school
+    - college
+    - university
+  AGRICULTURE:
+    - agriculture
+    - agricultural
+    - irrigation
+    - ip set
+    - ipset
+  INDUSTRIAL:
+    - industrial
+    - industry
+    - factory
+    - manufacturing
+
+# Tariff code regex patterns (applied to normalized codes like LT-1, LT-2A)
+# HYPOTHESIS — confirm against official KERC schedule before production trust.
+tariff_code_patterns:
+  DOMESTIC:
+    - "^LT-1"
+  EDUCATIONAL:
+    - "^LT-2"
+  COMMERCIAL:
+    - "^LT-3"
+  INDUSTRIAL:
+    - "^LT-5"
+  AGRICULTURE:
+    - "^LT-4"
+
+# Relative weights when combining signals
+signal_weights:
+  tariff_code: 0.6
+  consumer_category_text: 0.4

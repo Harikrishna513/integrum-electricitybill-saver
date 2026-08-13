@@ -1,0 +1,3507 @@
+
+===== L5 Milestone 19 @26009 =====
+Milestone 19
+
+Contextual question rewriting + memory
+
+## Milestone 20
+
+RAG/official-source retrieval
+
+## Milestone 21
+
+Evaluation framework
+
+## Milestone 22
+
+Next.js frontend
+
+## Milestone 23
+
+Production hardening
+
+---
+
+# 48. WHAT I WANT FROM YOU RIGHT NOW
+
+Do NOT start implementing all milestones.
+
+Start with:
+
+# MILESTONE 0 — ARCHITECTURE
+
+Give me:
+
+1. High-level architecture
+2. Folder structure
+3. Data flow
+4. Technology choices
+5. Why each technology is needed
+6. What should be AI vs deterministic
+7. What the first database entities will be
+8. What the first API endpoints will be
+9. What we deliberately will NOT build yet
+10. Risks and unknowns
+11. How the VNM module will eventually fit
+12. How tariff/rule versioning will work
+13. How past/present/future rules will be represented
+
+Then STOP.
+
+Do not create the whole project yet.
+
+Wait for my confirmation before Milestone 1.
+
+---
+
+# 49. TEACHING STYLE
+
+I want explanations in this format:
+
+```text
+CONCEPT
+↓
+WHY IT EXISTS
+↓
+REAL-WORLD BESCOM EXAMPLE
+↓
+CODE
+↓
+DATA FLOW
+↓
+COMMON MISTAKE
+↓
+HOW TO TEST
+↓
+SELF-CHECK
+```
+
+Use simple language first.
+
+Then give the engineering-level explanation.
+
+Do not assume I know advanced Python.
+
+I know Java/Spring Boot concepts, so you can compare when useful.
+
+---
+
+# 50. FINAL ENGINEERING PRINCIPLE
+
+The application should ultimately behave like this:
+
+```text
+             USER
+               |
+               v
+          Bill / Question
+               |
+               v
+        Understanding Layer
+               |
+               v
+       Structured Domain Data
+               |
+               v
+       Deterministic Engines
+               |
+      +--------+--------+
+      |        |        |
+    Tariff   Savings   Solar
+      |        |        |
+      +--------+--------+
+               |
+              VNM
+               |
+               v
+         Agent / LLM
+               |
+               v
+        Human Explanation
+```
+
+The LLM is the **reasoning/interface layer**, not the financial source of truth.
+
+The deterministic engines are the **source of truth**.
+
+The official Karnataka/BESCOM/KERC documents are the **source of regulatory truth**.
+
+The database stores the **historical st
+
+===== L5 contextual @18022 =====
+contextual question rewriting.
+
+Example:
+
+```text
+User:
+What is my bill?
+
+Assistant:
+Your bill is ₹2,400.
+
+User:
+Why is it high?
+
+```
+
+The rewriter should produce:
+
+```text
+Why is my BESCOM residential electricity bill
+₹2,400 this month?
+```
+
+Another:
+
+```text
+User:
+Can I use solar?
+
+```
+
+The rewriter should preserve context:
+
+```text
+Can this BESCOM residential connection
+benefit from rooftop solar based on
+its recent electricity consumption?
+```
+
+But do not invent facts.
+
+---
+
+# 32. TOOL ROUTING
+
+Do not route everything to web search.
+
+Example:
+
+```text
+"What is my consumption?"
+        ↓
+Bill analysis tool
+
+"Why did my bill increase?"
+        ↓
+Consumption analysis tool
+
+"Am I eligible for Gruha Jyothi?"
+        ↓
+Gruha Jyothi tool
+
+"Can I install solar?"
+        ↓
+Solar analysis tool
+
+"Can our apartment use VNM?"
+        ↓
+VNM analysis tool
+
+"What is the latest VNM rule?"
+        ↓
+Official-source web search
+```
+
+This is the agent architecture I want to learn.
+
+---
+
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python architecture with familiar concepts such as:
+
+===== L5 Contextual @26023 =====
+Contextual question rewriting + memory
+
+## Milestone 20
+
+RAG/official-source retrieval
+
+## Milestone 21
+
+Evaluation framework
+
+## Milestone 22
+
+Next.js frontend
+
+## Milestone 23
+
+Production hardening
+
+---
+
+# 48. WHAT I WANT FROM YOU RIGHT NOW
+
+Do NOT start implementing all milestones.
+
+Start with:
+
+# MILESTONE 0 — ARCHITECTURE
+
+Give me:
+
+1. High-level architecture
+2. Folder structure
+3. Data flow
+4. Technology choices
+5. Why each technology is needed
+6. What should be AI vs deterministic
+7. What the first database entities will be
+8. What the first API endpoints will be
+9. What we deliberately will NOT build yet
+10. Risks and unknowns
+11. How the VNM module will eventually fit
+12. How tariff/rule versioning will work
+13. How past/present/future rules will be represented
+
+Then STOP.
+
+Do not create the whole project yet.
+
+Wait for my confirmation before Milestone 1.
+
+---
+
+# 49. TEACHING STYLE
+
+I want explanations in this format:
+
+```text
+CONCEPT
+↓
+WHY IT EXISTS
+↓
+REAL-WORLD BESCOM EXAMPLE
+↓
+CODE
+↓
+DATA FLOW
+↓
+COMMON MISTAKE
+↓
+HOW TO TEST
+↓
+SELF-CHECK
+```
+
+Use simple language first.
+
+Then give the engineering-level explanation.
+
+Do not assume I know advanced Python.
+
+I know Java/Spring Boot concepts, so you can compare when useful.
+
+---
+
+# 50. FINAL ENGINEERING PRINCIPLE
+
+The application should ultimately behave like this:
+
+```text
+             USER
+               |
+               v
+          Bill / Question
+               |
+               v
+        Understanding Layer
+               |
+               v
+       Structured Domain Data
+               |
+               v
+       Deterministic Engines
+               |
+      +--------+--------+
+      |        |        |
+    Tariff   Savings   Solar
+      |        |        |
+      +--------+--------+
+               |
+              VNM
+               |
+               v
+         Agent / LLM
+               |
+               v
+        Human Explanation
+```
+
+The LLM is the **reasoning/interface layer**, not the financial source of truth.
+
+The deterministic engines are the **source of truth**.
+
+The official Karnataka/BESCOM/KERC documents are the **source of regulatory truth**.
+
+The database stores the **historical state of the rul
+
+===== L5 REWRIT @17989 =====
+REWRITING
+
+The agent should have contextual question rewriting.
+
+Example:
+
+```text
+User:
+What is my bill?
+
+Assistant:
+Your bill is ₹2,400.
+
+User:
+Why is it high?
+
+```
+
+The rewriter should produce:
+
+```text
+Why is my BESCOM residential electricity bill
+₹2,400 this month?
+```
+
+Another:
+
+```text
+User:
+Can I use solar?
+
+```
+
+The rewriter should preserve context:
+
+```text
+Can this BESCOM residential connection
+benefit from rooftop solar based on
+its recent electricity consumption?
+```
+
+But do not invent facts.
+
+---
+
+# 32. TOOL ROUTING
+
+Do not route everything to web search.
+
+Example:
+
+```text
+"What is my consumption?"
+        ↓
+Bill analysis tool
+
+"Why did my bill increase?"
+        ↓
+Consumption analysis tool
+
+"Am I eligible for Gruha Jyothi?"
+        ↓
+Gruha Jyothi tool
+
+"Can I install solar?"
+        ↓
+Solar analysis tool
+
+"Can our apartment use VNM?"
+        ↓
+VNM analysis tool
+
+"What is the latest VNM rule?"
+        ↓
+Official-source web search
+```
+
+This is the agent architecture I want to learn.
+
+---
+
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python architectur
+
+===== L5 rewrit @18042 =====
+rewriting.
+
+Example:
+
+```text
+User:
+What is my bill?
+
+Assistant:
+Your bill is ₹2,400.
+
+User:
+Why is it high?
+
+```
+
+The rewriter should produce:
+
+```text
+Why is my BESCOM residential electricity bill
+₹2,400 this month?
+```
+
+Another:
+
+```text
+User:
+Can I use solar?
+
+```
+
+The rewriter should preserve context:
+
+```text
+Can this BESCOM residential connection
+benefit from rooftop solar based on
+its recent electricity consumption?
+```
+
+But do not invent facts.
+
+---
+
+# 32. TOOL ROUTING
+
+Do not route everything to web search.
+
+Example:
+
+```text
+"What is my consumption?"
+        ↓
+Bill analysis tool
+
+"Why did my bill increase?"
+        ↓
+Consumption analysis tool
+
+"Am I eligible for Gruha Jyothi?"
+        ↓
+Gruha Jyothi tool
+
+"Can I install solar?"
+        ↓
+Solar analysis tool
+
+"Can our apartment use VNM?"
+        ↓
+VNM analysis tool
+
+"What is the latest VNM rule?"
+        ↓
+Official-source web search
+```
+
+This is the agent architecture I want to learn.
+
+---
+
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python architecture with familiar concepts such as:
+
+```text
+Controller
+
+===== L5 rewrit @18161 =====
+rewriter should produce:
+
+```text
+Why is my BESCOM residential electricity bill
+₹2,400 this month?
+```
+
+Another:
+
+```text
+User:
+Can I use solar?
+
+```
+
+The rewriter should preserve context:
+
+```text
+Can this BESCOM residential connection
+benefit from rooftop solar based on
+its recent electricity consumption?
+```
+
+But do not invent facts.
+
+---
+
+# 32. TOOL ROUTING
+
+Do not route everything to web search.
+
+Example:
+
+```text
+"What is my consumption?"
+        ↓
+Bill analysis tool
+
+"Why did my bill increase?"
+        ↓
+Consumption analysis tool
+
+"Am I eligible for Gruha Jyothi?"
+        ↓
+Gruha Jyothi tool
+
+"Can I install solar?"
+        ↓
+Solar analysis tool
+
+"Can our apartment use VNM?"
+        ↓
+VNM analysis tool
+
+"What is the latest VNM rule?"
+        ↓
+Official-source web search
+```
+
+This is the agent architecture I want to learn.
+
+---
+
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python architecture with familiar concepts such as:
+
+```text
+Controller
+Service
+Repository
+Domain
+Dependency Injection
+Configuration
+```
+
+This will help me transfer my Java/Spring knowledge 
+
+===== L5 rewrit @18316 =====
+rewriter should preserve context:
+
+```text
+Can this BESCOM residential connection
+benefit from rooftop solar based on
+its recent electricity consumption?
+```
+
+But do not invent facts.
+
+---
+
+# 32. TOOL ROUTING
+
+Do not route everything to web search.
+
+Example:
+
+```text
+"What is my consumption?"
+        ↓
+Bill analysis tool
+
+"Why did my bill increase?"
+        ↓
+Consumption analysis tool
+
+"Am I eligible for Gruha Jyothi?"
+        ↓
+Gruha Jyothi tool
+
+"Can I install solar?"
+        ↓
+Solar analysis tool
+
+"Can our apartment use VNM?"
+        ↓
+VNM analysis tool
+
+"What is the latest VNM rule?"
+        ↓
+Official-source web search
+```
+
+This is the agent architecture I want to learn.
+
+---
+
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python architecture with familiar concepts such as:
+
+```text
+Controller
+Service
+Repository
+Domain
+Dependency Injection
+Configuration
+```
+
+This will help me transfer my Java/Spring knowledge to Python.
+
+---
+
+# 36. TESTING
+
+Every important deterministic component must have tests.
+
+At minimum:
+
+```text
+test_bill_validation
+test_category_classific
+
+===== L5 REWRIT @22924 =====
+REWRITING
+====================================================
+
+Original:
+...
+
+Rewritten:
+...
+
+====================================================
+INTENT
+====================================================
+
+...
+
+====================================================
+TOOL
+====================================================
+
+Tool:
+...
+
+Input:
+...
+
+====================================================
+OBSERVATION
+====================================================
+
+...
+
+====================================================
+FINAL ANSWER
+====================================================
+
+...
+```
+
+This is specifically for my learning.
+
+Later we can replace this with structured logging.
+
+---
+
+# 43. DO NOT HIDE LANGCHAIN
+
+I am learning LangChain.
+
+Where appropriate, explicitly show:
+
+```text
+PromptTemplate
+ChatPromptTemplate
+Structured Output
+Output Parser
+Chain
+Memory
+Tool
+Agent
+Retriever
+```
+
+But do NOT use LangChain merely because it exists.
+
+If plain Python is better, explain why.
+
+For example:
+
+```text
+Tariff calculation
+```
+
+should remain normal Python.
+
+Not:
+
+```text
+LLM chain → tariff calculation
+```
+
+---
+
+# 44. USE MODERN LANGCHAIN APIs
+
+Do not copy outdated DeepLearning.AI course APIs blindly.
+
+The course material may use deprecated classes/APIs.
+
+Use currently supported versions of:
+
+```text
+langchain
+langchain-core
+langchain-google-genai
+```
+
+If an API from the course is deprecated:
+
+1. Tell me what changed.
+2. Show the old concept.
+3. Show the modern implementation.
+4. Explain why the modern API is preferred.
+
+---
+
+# 45. GEMINI
+
+Use Gemini through:
+
+```text
+langchain-google-genai
+```
+
+with the model loaded from:
+
+```env
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Do not hardcode the model.
+
+Use Gemini Vision for image understanding/extraction where appropriate.
+
+Use structured output/Pydantic wherever possible.
+
+---
+
+# 46. IMPORTANT: DON'T OVERENGINEER THE FIRST VERSION
+
+First working milestone:
+
+```text
+Upload image
+        ↓
+Gemini
+        ↓
+ElectricityBill schema
+        ↓
+Category detection
+        ↓
+Validation
+        ↓
+Terminal result
+```
+
+Then progressively add:
+
+```text
+database
+↓
+multiple bills
+↓
+tariff engine
+↓
+Gruha Jyothi
+↓
+savings
+↓
+solar
+↓
+VNM
+↓
+age
+
+===== L5 Rewrit @23003 =====
+Rewritten:
+...
+
+====================================================
+INTENT
+====================================================
+
+...
+
+====================================================
+TOOL
+====================================================
+
+Tool:
+...
+
+Input:
+...
+
+====================================================
+OBSERVATION
+====================================================
+
+...
+
+====================================================
+FINAL ANSWER
+====================================================
+
+...
+```
+
+This is specifically for my learning.
+
+Later we can replace this with structured logging.
+
+---
+
+# 43. DO NOT HIDE LANGCHAIN
+
+I am learning LangChain.
+
+Where appropriate, explicitly show:
+
+```text
+PromptTemplate
+ChatPromptTemplate
+Structured Output
+Output Parser
+Chain
+Memory
+Tool
+Agent
+Retriever
+```
+
+But do NOT use LangChain merely because it exists.
+
+If plain Python is better, explain why.
+
+For example:
+
+```text
+Tariff calculation
+```
+
+should remain normal Python.
+
+Not:
+
+```text
+LLM chain → tariff calculation
+```
+
+---
+
+# 44. USE MODERN LANGCHAIN APIs
+
+Do not copy outdated DeepLearning.AI course APIs blindly.
+
+The course material may use deprecated classes/APIs.
+
+Use currently supported versions of:
+
+```text
+langchain
+langchain-core
+langchain-google-genai
+```
+
+If an API from the course is deprecated:
+
+1. Tell me what changed.
+2. Show the old concept.
+3. Show the modern implementation.
+4. Explain why the modern API is preferred.
+
+---
+
+# 45. GEMINI
+
+Use Gemini through:
+
+```text
+langchain-google-genai
+```
+
+with the model loaded from:
+
+```env
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Do not hardcode the model.
+
+Use Gemini Vision for image understanding/extraction where appropriate.
+
+Use structured output/Pydantic wherever possible.
+
+---
+
+# 46. IMPORTANT: DON'T OVERENGINEER THE FIRST VERSION
+
+First working milestone:
+
+```text
+Upload image
+        ↓
+Gemini
+        ↓
+ElectricityBill schema
+        ↓
+Category detection
+        ↓
+Validation
+        ↓
+Terminal result
+```
+
+Then progressively add:
+
+```text
+database
+↓
+multiple bills
+↓
+tariff engine
+↓
+Gruha Jyothi
+↓
+savings
+↓
+solar
+↓
+VNM
+↓
+agent
+↓
+frontend
+```
+
+---
+
+# 47. DEVELOPMENT MILESTONES
+
+Use exactly this progress
+
+===== L5 rewrit @26043 =====
+rewriting + memory
+
+## Milestone 20
+
+RAG/official-source retrieval
+
+## Milestone 21
+
+Evaluation framework
+
+## Milestone 22
+
+Next.js frontend
+
+## Milestone 23
+
+Production hardening
+
+---
+
+# 48. WHAT I WANT FROM YOU RIGHT NOW
+
+Do NOT start implementing all milestones.
+
+Start with:
+
+# MILESTONE 0 — ARCHITECTURE
+
+Give me:
+
+1. High-level architecture
+2. Folder structure
+3. Data flow
+4. Technology choices
+5. Why each technology is needed
+6. What should be AI vs deterministic
+7. What the first database entities will be
+8. What the first API endpoints will be
+9. What we deliberately will NOT build yet
+10. Risks and unknowns
+11. How the VNM module will eventually fit
+12. How tariff/rule versioning will work
+13. How past/present/future rules will be represented
+
+Then STOP.
+
+Do not create the whole project yet.
+
+Wait for my confirmation before Milestone 1.
+
+---
+
+# 49. TEACHING STYLE
+
+I want explanations in this format:
+
+```text
+CONCEPT
+↓
+WHY IT EXISTS
+↓
+REAL-WORLD BESCOM EXAMPLE
+↓
+CODE
+↓
+DATA FLOW
+↓
+COMMON MISTAKE
+↓
+HOW TO TEST
+↓
+SELF-CHECK
+```
+
+Use simple language first.
+
+Then give the engineering-level explanation.
+
+Do not assume I know advanced Python.
+
+I know Java/Spring Boot concepts, so you can compare when useful.
+
+---
+
+# 50. FINAL ENGINEERING PRINCIPLE
+
+The application should ultimately behave like this:
+
+```text
+             USER
+               |
+               v
+          Bill / Question
+               |
+               v
+        Understanding Layer
+               |
+               v
+       Structured Domain Data
+               |
+               v
+       Deterministic Engines
+               |
+      +--------+--------+
+      |        |        |
+    Tariff   Savings   Solar
+      |        |        |
+      +--------+--------+
+               |
+              VNM
+               |
+               v
+         Agent / LLM
+               |
+               v
+        Human Explanation
+```
+
+The LLM is the **reasoning/interface layer**, not the financial source of truth.
+
+The deterministic engines are the **source of truth**.
+
+The official Karnataka/BESCOM/KERC documents are the **source of regulatory truth**.
+
+The database stores the **historical state of the rules and bills**.
+
+The
+
+===== L5 memory @806 =====
+memory, chains, and RAG/rule-based systems while building this project.
+
+Therefore:
+
+> **DO NOT build this as a black box.**
+>
+> Build it in stages and teach me the architecture and reasoning as we go.
+
+---
+
+# 1. YOUR ROLE
+
+For every implementation step, act as:
+
+1. Senior Backend Engineer
+2. AI/LLM Engineer
+3. System Architect
+4. Domain-model designer
+5. Testing engineer
+6. My personal mentor
+
+I want to understand:
+
+* Why this component exists
+* Why we chose this architecture
+* What problem it solves
+* What happens before it
+* What happens after it
+* What data enters it
+* What data leaves it
+* Which parts use AI
+* Which parts must NOT use AI
+* Which parts are deterministic
+* How the components communicate
+* How we test it
+* What can fail
+* How we debug it
+
+Never just give me code without explaining the architecture first.
+
+---
+
+# 2. VERY IMPORTANT LEARNING RULE
+
+Do NOT implement the entire application in one shot.
+
+Use incremental milestones.
+
+At the beginning of every milestone, explain:
+
+```text
+What are we building?
+Why are we building it?
+What problem does it solve?
+What files will change?
+What data flows through it?
+What should I understand before coding?
+```
+
+Then implement it.
+
+After implementation, explain:
+
+```text
+How it works end-to-end
+Important classes/functions
+Important Python concepts
+Important LangChain concepts
+Important AI concepts
+Possible failures
+How to test it
+```
+
+Then give me:
+
+```text
+SELF-CHECK
+```
+
+with 3–5 questions/tasks that I should answer or perform myself.
+
+Do NOT automatically move to the next milestone until I understand the current one.
+
+---
+
+# 3. CORE ARCHITECTURE PRINCIPLE
+
+The most important architectural rule is:
+
+> The LLM must NOT be the source of truth for electricity tariffs, bill calculations, eligibility decisions, or financial savings calculations.
+
+Use AI for:
+
+* Understanding bill images
+* Extracting fields
+* Normalizing messy text
+* Understanding user questions
+* Explaining deterministic results
+* Conversational interaction
+
+Use deterministic Python/rule engines for:
+
+* Arithmetic
+* Unit calculations
+* Bill calculations
+* Tariff application
+* Historical rule selection
+* Savings calculations
+* Eligibility rules
+
+
+===== L5 MEMORY @10622 =====
+MEMORY
+
+The application must use verified KERC/BESCOM tariff documentation for the applicable period.
+
+Treat any category mapping we discussed during planning as a hypothesis until verified against the official tariff order.
+
+The rule database must be versioned.
+
+---
+
+# 16. BILL VALIDATION
+
+After extraction, create a validation layer.
+
+Examples:
+
+```text
+current_reading >= previous_reading
+```
+
+Check:
+
+```text
+current_reading - previous_reading
+```
+
+against:
+
+```text
+units_consumed
+```
+
+If they don't match:
+
+```text
+POTENTIAL_METER_READING_MISMATCH
+```
+
+Do NOT say:
+
+```text
+BESCOM overcharged the customer.
+```
+
+Instead:
+
+```text
+The bill contains a reading mismatch that should be verified.
+```
+
+The application must distinguish:
+
+```text
+Detected discrepancy
+```
+
+from:
+
+```text
+Proven billing error
+```
+
+---
+
+# 17. BILL BREAKDOWN
+
+Eventually calculate and explain:
+
+```text
+Energy charges
+Fixed charges
+Taxes
+Surcharges
+Adjustments
+Subsidy
+Arrears
+Other charges
+Final amount
+```
+
+But only after the extracted values and tariff rules are validated.
+
+---
+
+# 18. TARIFF ENGINE
+
+Create:
+
+```text
+TariffEngine
+```
+
+It should receive:
+
+```text
+discom
+category
+billing_period
+units
+load
+```
+
+and return:
+
+```text
+applicable tariff rule
+calculated charges
+calculation explanation
+rule version
+source
+```
+
+Do not let Gemini calculate tariff amounts.
+
+Example:
+
+```python
+result = tariff_engine.calculate(bill)
+```
+
+The result should be deterministic.
+
+---
+
+# 19. GRUHA JYOTHI
+
+Create a separate:
+
+```text
+GruhaJyothiEngine
+```
+
+Do not mix it into the generic tariff engine.
+
+It should determine:
+
+```text
+Does this consumer appear eligible based
+on available information?
+```
+
+If historical information is required and the user uploaded only one bill:
+
+```text
+Insufficient information.
+```
+
+Ask for the required historical data.
+
+Never manufacture missing values.
+
+The system should cite the applicable official government/order source internally.
+
+---
+
+# 20. HISTORICAL BILL ANALYSIS
+
+After single-bill analysis works, allow:
+
+```text
+1 bill
+3 bills
+6 bills
+12 bills
+```
+
+Store normalized bills.
+
+Then calculate:
+
+```text
+monthly consumption
+monthly bill
+average consumption
+maximum consumption
+mi
+
+===== L5 memory @19255 =====
+memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python architecture with familiar concepts such as:
+
+```text
+Controller
+Service
+Repository
+Domain
+Dependency Injection
+Configuration
+```
+
+This will help me transfer my Java/Spring knowledge to Python.
+
+---
+
+# 36. TESTING
+
+Every important deterministic component must have tests.
+
+At minimum:
+
+```text
+test_bill_validation
+test_category_classification
+test_tariff_rule_selection
+test_consumption_calculation
+test_savings_calculation
+test_gruha_jyothi_rules
+test_solar_calculation
+test_vnm_rules
+```
+
+Also create sample anonymized bill fixtures.
+
+Do not commit real customer personal information.
+
+---
+
+# 37. EVALUATION
+
+Create an evaluation dataset later.
+
+For each bill:
+
+```text
+expected_category
+expected_tariff
+expected_units
+expected_amount
+expected_bill_date
+```
+
+Then measure:
+
+```text
+field extraction accuracy
+category accuracy
+calculation accuracy
+rule selection accuracy
+```
+
+LLM evaluation should be separate from deterministic calculation evaluation.
+
+---
+
+# 38. SECURITY AND PRIVACY
+
+Bills contain sensitive personal information.
+
+Design for:
+
+```text
+PII protection
+secure file storage
+access control
+encrypted storage where applicable
+short-lived file URLs
+no API keys in source code
+no real bills in Git
+logging without sensitive fields
+```
+
+Do not print complete bill
+
+===== L5 Memory @23794 =====
+Memory
+Tool
+Agent
+Retriever
+```
+
+But do NOT use LangChain merely because it exists.
+
+If plain Python is better, explain why.
+
+For example:
+
+```text
+Tariff calculation
+```
+
+should remain normal Python.
+
+Not:
+
+```text
+LLM chain → tariff calculation
+```
+
+---
+
+# 44. USE MODERN LANGCHAIN APIs
+
+Do not copy outdated DeepLearning.AI course APIs blindly.
+
+The course material may use deprecated classes/APIs.
+
+Use currently supported versions of:
+
+```text
+langchain
+langchain-core
+langchain-google-genai
+```
+
+If an API from the course is deprecated:
+
+1. Tell me what changed.
+2. Show the old concept.
+3. Show the modern implementation.
+4. Explain why the modern API is preferred.
+
+---
+
+# 45. GEMINI
+
+Use Gemini through:
+
+```text
+langchain-google-genai
+```
+
+with the model loaded from:
+
+```env
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Do not hardcode the model.
+
+Use Gemini Vision for image understanding/extraction where appropriate.
+
+Use structured output/Pydantic wherever possible.
+
+---
+
+# 46. IMPORTANT: DON'T OVERENGINEER THE FIRST VERSION
+
+First working milestone:
+
+```text
+Upload image
+        ↓
+Gemini
+        ↓
+ElectricityBill schema
+        ↓
+Category detection
+        ↓
+Validation
+        ↓
+Terminal result
+```
+
+Then progressively add:
+
+```text
+database
+↓
+multiple bills
+↓
+tariff engine
+↓
+Gruha Jyothi
+↓
+savings
+↓
+solar
+↓
+VNM
+↓
+agent
+↓
+frontend
+```
+
+---
+
+# 47. DEVELOPMENT MILESTONES
+
+Use exactly this progression:
+
+## Milestone 0
+
+Architecture + project setup
+
+## Milestone 1
+
+Environment + Gemini connection
+
+## Milestone 2
+
+Upload/read bill image
+
+## Milestone 3
+
+Gemini structured bill extraction
+
+## Milestone 4
+
+Pydantic validation
+
+## Milestone 5
+
+Consumer category classification
+
+## Milestone 6
+
+Bill consistency validation
+
+## Milestone 7
+
+Canonical bill storage
+
+## Milestone 8
+
+Historical bill storage
+
+## Milestone 9
+
+Consumption analysis
+
+## Milestone 10
+
+Versioned tariff engine
+
+## Milestone 11
+
+Gruha Jyothi rules
+
+## Milestone 12
+
+Savings engine
+
+## Milestone 13
+
+Appliance analysis
+
+## Milestone 14
+
+Solar analysis
+
+## Milestone 15
+
+Understand and model Net Metering
+
+## Milestone 16
+
+Understand and implement VNM analysis
+
+## Milestone 17
+
+GNM analysis
+
+## Milestone 18
+
+Agent + to
+
+===== L5 memory @26055 =====
+memory
+
+## Milestone 20
+
+RAG/official-source retrieval
+
+## Milestone 21
+
+Evaluation framework
+
+## Milestone 22
+
+Next.js frontend
+
+## Milestone 23
+
+Production hardening
+
+---
+
+# 48. WHAT I WANT FROM YOU RIGHT NOW
+
+Do NOT start implementing all milestones.
+
+Start with:
+
+# MILESTONE 0 — ARCHITECTURE
+
+Give me:
+
+1. High-level architecture
+2. Folder structure
+3. Data flow
+4. Technology choices
+5. Why each technology is needed
+6. What should be AI vs deterministic
+7. What the first database entities will be
+8. What the first API endpoints will be
+9. What we deliberately will NOT build yet
+10. Risks and unknowns
+11. How the VNM module will eventually fit
+12. How tariff/rule versioning will work
+13. How past/present/future rules will be represented
+
+Then STOP.
+
+Do not create the whole project yet.
+
+Wait for my confirmation before Milestone 1.
+
+---
+
+# 49. TEACHING STYLE
+
+I want explanations in this format:
+
+```text
+CONCEPT
+↓
+WHY IT EXISTS
+↓
+REAL-WORLD BESCOM EXAMPLE
+↓
+CODE
+↓
+DATA FLOW
+↓
+COMMON MISTAKE
+↓
+HOW TO TEST
+↓
+SELF-CHECK
+```
+
+Use simple language first.
+
+Then give the engineering-level explanation.
+
+Do not assume I know advanced Python.
+
+I know Java/Spring Boot concepts, so you can compare when useful.
+
+---
+
+# 50. FINAL ENGINEERING PRINCIPLE
+
+The application should ultimately behave like this:
+
+```text
+             USER
+               |
+               v
+          Bill / Question
+               |
+               v
+        Understanding Layer
+               |
+               v
+       Structured Domain Data
+               |
+               v
+       Deterministic Engines
+               |
+      +--------+--------+
+      |        |        |
+    Tariff   Savings   Solar
+      |        |        |
+      +--------+--------+
+               |
+              VNM
+               |
+               v
+         Agent / LLM
+               |
+               v
+        Human Explanation
+```
+
+The LLM is the **reasoning/interface layer**, not the financial source of truth.
+
+The deterministic engines are the **source of truth**.
+
+The official Karnataka/BESCOM/KERC documents are the **source of regulatory truth**.
+
+The database stores the **historical state of the rules and bills**.
+
+The user always
+
+===== L5 QUESTION REWRITING @17980 =====
+QUESTION REWRITING
+
+The agent should have contextual question rewriting.
+
+Example:
+
+```text
+User:
+What is my bill?
+
+Assistant:
+Your bill is ₹2,400.
+
+User:
+Why is it high?
+
+```
+
+The rewriter should produce:
+
+```text
+Why is my BESCOM residential electricity bill
+₹2,400 this month?
+```
+
+Another:
+
+```text
+User:
+Can I use solar?
+
+```
+
+The rewriter should preserve context:
+
+```text
+Can this BESCOM residential connection
+benefit from rooftop solar based on
+its recent electricity consumption?
+```
+
+But do not invent facts.
+
+---
+
+# 32. TOOL ROUTING
+
+Do not route everything to web search.
+
+Example:
+
+```text
+"What is my consumption?"
+        ↓
+Bill analysis tool
+
+"Why did my bill increase?"
+        ↓
+Consumption analysis tool
+
+"Am I eligible for Gruha Jyothi?"
+        ↓
+Gruha Jyothi tool
+
+"Can I install solar?"
+        ↓
+Solar analysis tool
+
+"Can our apartment use VNM?"
+        ↓
+VNM analysis tool
+
+"What is the latest VNM rule?"
+        ↓
+Official-source web search
+```
+
+This is the agent architecture I want to learn.
+
+---
+
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python ar
+
+===== L5 question rewriting @18033 =====
+question rewriting.
+
+Example:
+
+```text
+User:
+What is my bill?
+
+Assistant:
+Your bill is ₹2,400.
+
+User:
+Why is it high?
+
+```
+
+The rewriter should produce:
+
+```text
+Why is my BESCOM residential electricity bill
+₹2,400 this month?
+```
+
+Another:
+
+```text
+User:
+Can I use solar?
+
+```
+
+The rewriter should preserve context:
+
+```text
+Can this BESCOM residential connection
+benefit from rooftop solar based on
+its recent electricity consumption?
+```
+
+But do not invent facts.
+
+---
+
+# 32. TOOL ROUTING
+
+Do not route everything to web search.
+
+Example:
+
+```text
+"What is my consumption?"
+        ↓
+Bill analysis tool
+
+"Why did my bill increase?"
+        ↓
+Consumption analysis tool
+
+"Am I eligible for Gruha Jyothi?"
+        ↓
+Gruha Jyothi tool
+
+"Can I install solar?"
+        ↓
+Solar analysis tool
+
+"Can our apartment use VNM?"
+        ↓
+VNM analysis tool
+
+"What is the latest VNM rule?"
+        ↓
+Official-source web search
+```
+
+This is the agent architecture I want to learn.
+
+---
+
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python architecture with familiar concepts such as:
+
+```text
+C
+
+===== L5 QUESTION REWRITING @22915 =====
+QUESTION REWRITING
+====================================================
+
+Original:
+...
+
+Rewritten:
+...
+
+====================================================
+INTENT
+====================================================
+
+...
+
+====================================================
+TOOL
+====================================================
+
+Tool:
+...
+
+Input:
+...
+
+====================================================
+OBSERVATION
+====================================================
+
+...
+
+====================================================
+FINAL ANSWER
+====================================================
+
+...
+```
+
+This is specifically for my learning.
+
+Later we can replace this with structured logging.
+
+---
+
+# 43. DO NOT HIDE LANGCHAIN
+
+I am learning LangChain.
+
+Where appropriate, explicitly show:
+
+```text
+PromptTemplate
+ChatPromptTemplate
+Structured Output
+Output Parser
+Chain
+Memory
+Tool
+Agent
+Retriever
+```
+
+But do NOT use LangChain merely because it exists.
+
+If plain Python is better, explain why.
+
+For example:
+
+```text
+Tariff calculation
+```
+
+should remain normal Python.
+
+Not:
+
+```text
+LLM chain → tariff calculation
+```
+
+---
+
+# 44. USE MODERN LANGCHAIN APIs
+
+Do not copy outdated DeepLearning.AI course APIs blindly.
+
+The course material may use deprecated classes/APIs.
+
+Use currently supported versions of:
+
+```text
+langchain
+langchain-core
+langchain-google-genai
+```
+
+If an API from the course is deprecated:
+
+1. Tell me what changed.
+2. Show the old concept.
+3. Show the modern implementation.
+4. Explain why the modern API is preferred.
+
+---
+
+# 45. GEMINI
+
+Use Gemini through:
+
+```text
+langchain-google-genai
+```
+
+with the model loaded from:
+
+```env
+GEMINI_MODEL=gemini-2.5-flash
+```
+
+Do not hardcode the model.
+
+Use Gemini Vision for image understanding/extraction where appropriate.
+
+Use structured output/Pydantic wherever possible.
+
+---
+
+# 46. IMPORTANT: DON'T OVERENGINEER THE FIRST VERSION
+
+First working milestone:
+
+```text
+Upload image
+        ↓
+Gemini
+        ↓
+ElectricityBill schema
+        ↓
+Category detection
+        ↓
+Validation
+        ↓
+Terminal result
+```
+
+Then progressively add:
+
+```text
+database
+↓
+multiple bills
+↓
+tariff engine
+↓
+Gruha Jyothi
+↓
+savings
+↓
+solar
+↓
+
+
+===== L5 question rewriting @26034 =====
+question rewriting + memory
+
+## Milestone 20
+
+RAG/official-source retrieval
+
+## Milestone 21
+
+Evaluation framework
+
+## Milestone 22
+
+Next.js frontend
+
+## Milestone 23
+
+Production hardening
+
+---
+
+# 48. WHAT I WANT FROM YOU RIGHT NOW
+
+Do NOT start implementing all milestones.
+
+Start with:
+
+# MILESTONE 0 — ARCHITECTURE
+
+Give me:
+
+1. High-level architecture
+2. Folder structure
+3. Data flow
+4. Technology choices
+5. Why each technology is needed
+6. What should be AI vs deterministic
+7. What the first database entities will be
+8. What the first API endpoints will be
+9. What we deliberately will NOT build yet
+10. Risks and unknowns
+11. How the VNM module will eventually fit
+12. How tariff/rule versioning will work
+13. How past/present/future rules will be represented
+
+Then STOP.
+
+Do not create the whole project yet.
+
+Wait for my confirmation before Milestone 1.
+
+---
+
+# 49. TEACHING STYLE
+
+I want explanations in this format:
+
+```text
+CONCEPT
+↓
+WHY IT EXISTS
+↓
+REAL-WORLD BESCOM EXAMPLE
+↓
+CODE
+↓
+DATA FLOW
+↓
+COMMON MISTAKE
+↓
+HOW TO TEST
+↓
+SELF-CHECK
+```
+
+Use simple language first.
+
+Then give the engineering-level explanation.
+
+Do not assume I know advanced Python.
+
+I know Java/Spring Boot concepts, so you can compare when useful.
+
+---
+
+# 50. FINAL ENGINEERING PRINCIPLE
+
+The application should ultimately behave like this:
+
+```text
+             USER
+               |
+               v
+          Bill / Question
+               |
+               v
+        Understanding Layer
+               |
+               v
+       Structured Domain Data
+               |
+               v
+       Deterministic Engines
+               |
+      +--------+--------+
+      |        |        |
+    Tariff   Savings   Solar
+      |        |        |
+      +--------+--------+
+               |
+              VNM
+               |
+               v
+         Agent / LLM
+               |
+               v
+        Human Explanation
+```
+
+The LLM is the **reasoning/interface layer**, not the financial source of truth.
+
+The deterministic engines are the **source of truth**.
+
+The official Karnataka/BESCOM/KERC documents are the **source of regulatory truth**.
+
+The database stores the **historical state of the rules and bill
+
+===== L5 # 31 @17974 =====
+# 31. QUESTION REWRITING
+
+The agent should have contextual question rewriting.
+
+Example:
+
+```text
+User:
+What is my bill?
+
+Assistant:
+Your bill is ₹2,400.
+
+User:
+Why is it high?
+
+```
+
+The rewriter should produce:
+
+```text
+Why is my BESCOM residential electricity bill
+₹2,400 this month?
+```
+
+Another:
+
+```text
+User:
+Can I use solar?
+
+```
+
+The rewriter should preserve context:
+
+```text
+Can this BESCOM residential connection
+benefit from rooftop solar based on
+its recent electricity consumption?
+```
+
+But do not invent facts.
+
+---
+
+# 32. TOOL ROUTING
+
+Do not route everything to web search.
+
+Example:
+
+```text
+"What is my consumption?"
+        ↓
+Bill analysis tool
+
+"Why did my bill increase?"
+        ↓
+Consumption analysis tool
+
+"Am I eligible for Gruha Jyothi?"
+        ↓
+Gruha Jyothi tool
+
+"Can I install solar?"
+        ↓
+Solar analysis tool
+
+"Can our apartment use VNM?"
+        ↓
+VNM analysis tool
+
+"What is the latest VNM rule?"
+        ↓
+Official-source web search
+```
+
+This is the agent architecture I want to learn.
+
+---
+
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Pyt
+
+===== L5 # 33 @19007 =====
+# 33. WEB SEARCH MUST BE SPECIALIZED
+
+When searching for regulatory information:
+
+Prefer:
+
+```text
+KERC
+BESCOM
+Karnataka government
+official solar portal
+official government orders
+```
+
+Do not answer a current regulatory question solely from model memory.
+
+For time-sensitive rules:
+
+```text
+search → retrieve official source → extract rule → answer
+```
+
+---
+
+# 34. DATABASE DESIGN
+
+Eventually create these entities:
+
+```text
+Consumer
+Bill
+BillCharge
+MeterReading
+TariffRule
+SchemeRule
+SolarRule
+VNMRule
+GNMRule
+Document
+ExtractionResult
+Analysis
+Recommendation
+```
+
+Keep domain entities independent from LLM code.
+
+Bad:
+
+```text
+BillService calls Gemini everywhere.
+```
+
+Good:
+
+```text
+BillExtractionService
+        ↓
+ElectricityBill
+        ↓
+TariffEngine
+        ↓
+SavingsEngine
+        ↓
+AI Explanation
+```
+
+---
+
+# 35. PROJECT LAYERS
+
+Use a clean architecture.
+
+Prefer:
+
+```text
+domain
+application
+infrastructure
+api
+```
+
+Example:
+
+```text
+app/
+├── domain/
+├── application/
+├── infrastructure/
+├── api/
+├── config/
+└── main.py
+```
+
+Explain why each layer exists.
+
+I have previously worked with layered Spring Boot applications, so whenever useful, compare the Python architecture with familiar concepts such as:
+
+```text
+Controller
+Service
+Repository
+Domain
+Dependency Injection
+Configuration
+```
+
+This will help me transfer my Java/Spring knowledge to Python.
+
+---
+
+# 36. TESTING
+
+Every important deterministic component must have tests.
+
+At minimum:
+
+```text
+test_bill_validation
+test_category_classification
+test_tariff_rule_selection
+test_consumption_calculation
+test_savings_calculation
+test_gruha_jyothi_rules
+test_solar_calculation
+test_vnm_rules
+```
+
+Also create sample anonymized bill fixtures.
+
+Do not commit real customer personal information.
+
+---
+
+# 37. EVALUATION
+
+Create an evaluation dataset later.
+
+For each bill:
+
+```text
+expected_category
+expected_tariff
+expected_units
+expected_amount
+expected_bill_date
+```
+
+Then measure:
+
+```text
+field extraction accuracy
+category accuracy
+calculation accuracy
+rule selection accuracy
+```
+
+LLM evaluation should be separate from deterministic calculation evaluation.
+
+---
+
+# 38. SECURITY AND PRIVACY
+
+Bills contain sensitive personal inform
+
+===== L6 Rewrit @7585 =====
+Rewrite follow-up questions with context | VNM ratio math, plant size vs combined load |
+
+**Rule of thumb:** If a wrong number could cost the user money or mislead eligibility → **Python + versioned official rules**. If the job is “understand document / language” → **LLM**.
+
+---
+
+## 7. First database entities (when we reach Milestone 7–8)
+
+Start small; grow toward your full list:
+
+| Entity | Purpose |
+|--------|---------|
+| `Consumer` | RR / account id, discom, category (confirmed) |
+| `Document` | uploaded file metadata (path, hash, mime) — not full PII in logs |
+| `ExtractionResult` | raw model JSON + confidences + model name/version |
+| `Bill` | canonical normalized bill for a period |
+| `BillCharge` | line items (energy, fixed, tax…) later |
+| `Analysis` | validation issues, category decision, later engine outputs |
+| `TariffRule` / `SchemeRule` | metadata pointing at versioned rule files (or rows) |
+
+**Later:** `SolarRule`, `VNMRule`, `GNMRule`, `Recommendation`.
+
+Domain models in `domain/` stay independent of SQLAlchemy tables in `infrastructure/persistence/` (like domain entity vs `@Entity` if you keep them separate).
+
+---
+
+## 8. First API endpoints (minimal)
+
+| Method | Path | Purpose | Milestone |
+|--------|------|---------|-----------|
+| `GET` | `/health` | App up | 0–1 |
+| `POST` | `/bills/extract` | Upload image/PDF → extraction + category + validation | 2–6 |
+| `GET` | `/bills/{id}` | Fetch stored canonical bill | 7+ |
+
+**Deliberately later:** `/chat`, `/solar`, `/vnm`, `/savings`, auth, multi-tenant.
+
+---
+
+## 9. What we will NOT build yet
+
+- Frontend  
+- Tariff calculation / Gruha Jyothi math  
+- Savings / appliances / solar / VNM / GNM  
+- Agent, memory, RAG  
+- Postgres in production mode  
+- Payment / BESCOM login scraping  
+- Claiming “approved” for any scheme  
+- Hard-coded pixel/line OCR  
+
+---
+
+## 10. Risks and unknowns
+
+| Risk | Mitigation |
+|------|------------|
+| Bill layouts change | Semantic extraction → stable schema, not coordinates |
+| OCR wrong on blurry bills | Confidence + user confirm; no silent guess |
+| Online calculators disagree on tariffs | Only KERC/BESCOM orders in `rules/` |
+| Gruha Jyothi needs FY22–23 baseline | Return 
+
+===== L6 memory @9275 =====
+memory, RAG  
+- Postgres in production mode  
+- Payment / BESCOM login scraping  
+- Claiming “approved” for any scheme  
+- Hard-coded pixel/line OCR  
+
+---
+
+## 10. Risks and unknowns
+
+| Risk | Mitigation |
+|------|------------|
+| Bill layouts change | Semantic extraction → stable schema, not coordinates |
+| OCR wrong on blurry bills | Confidence + user confirm; no silent guess |
+| Online calculators disagree on tariffs | Only KERC/BESCOM orders in `rules/` |
+| Gruha Jyothi needs FY22–23 baseline | Return `INSUFFICIENT_INFORMATION` on one bill |
+| Gemini model renames / pricing | `GEMINI_MODEL` in `.env` only |
+| Legal: “overcharge” language | Only “mismatch to verify” |
+| PII in git/logs | Fixtures anonymized; redact logs |
+| VNM SOP time-sensitive (2026) | Versioned `VNM_RULE_*`, never overwrite |
+| Category codes need official verification | Classifier uses evidence; mapping tables versioned & marked unverified until checked |
+
+---
+
+## 11. How VNM fits later (without building it now)
+
+VNM is **another deterministic engine** after multi-bill + category + load exist:
+
+```text
+Multiple ElectricityBill (same community)
+        → VNMAnalysisEngine(inputs + VNMRule version)
+        → Potential suitability report
+        → LLM explains the report (not inventing eligibility)
+```
+
+```text
+domain/engines/vnm.py          # math + SOP checks
+rules/.../vnm_gnm/VNM_RULE_*.yaml
+application/use_cases/analyze_vnm.py
+# Agent tool: analyze_vnm  (Milestone 18)
+```
+
+Never `VNMApprovalEngine`. Output: potentially suitable / unsuitable / insufficient / needs BESCOM feasibility.
+
+---
+
+## 12. Tariff / rule versioning
+
+```text
+rules/karnataka/bescom/tariff/
+  LT1_DOMESTIC_2025-04-01.yaml
+  LT1_DOMESTIC_2026-04-01.yaml   # new file, old kept
+```
+
+Conceptually:
+
+```text
+TariffRule
+  discom, category, effective_from, effective_to
+  rule_version, source, source_document
+  payload (rates, fixed charges, …)
+```
+
+Selection:
+
+```text
+rule_repository.get_rule(
+  discom="BESCOM",
+  category="DOMESTIC",
+  as_of=bill.bill_date   # or billing period end
+)
+```
+
+**Not:** `if year == 2026:`.  
+**Same pattern** for Scheme / Solar / VNM / GNM.
+
+If official rate is unclear → `UNKNOWN` / `REQUIRES_VERIFIC
