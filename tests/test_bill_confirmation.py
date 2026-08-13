@@ -143,6 +143,64 @@ def test_accept_as_printed_bumps_confidence(db_session: Session, tmp_path: Path)
     assert "units_consumed" in result.confirmation.fields_accepted_as_printed
 
 
+def test_confirm_clears_charge_mismatch_after_user_attestation(db_session: Session, tmp_path: Path):
+    """INFO-level charge/total mismatch should not block confirm after user attests."""
+    settings = get_settings()
+    fake = ElectricityBillExtraction(
+        units_consumed=ExtractedField(value=59, confidence=0.95, source="bill"),
+        previous_meter_reading=ExtractedField(value=2370, confidence=0.95, source="bill"),
+        current_meter_reading=ExtractedField(value=2429, confidence=0.95, source="bill"),
+        energy_charge=ExtractedField(value=342.3, confidence=0.95, source="bill"),
+        fixed_charge=ExtractedField(value=150, confidence=0.95, source="bill"),
+        electricity_tax=ExtractedField(value=30.8, confidence=0.95, source="bill"),
+        fppca=ExtractedField(value=22.42, confidence=0.95, source="bill"),
+        other_charges=ExtractedField(value=20.65, confidence=0.95, source="bill"),
+        subsidy=ExtractedField(value=91.68, confidence=0.95, source="bill"),
+        total_amount=ExtractedField(value=73, confidence=0.95, source="bill"),
+        tariff_code=ExtractedField(value="LT-1", confidence=0.95, source="bill"),
+        consumer_category=ExtractedField(value="Domestic", confidence=0.95, source="bill"),
+        rr_number=ExtractedField(value="RR-CHG", confidence=0.9, source="bill"),
+        account_id=ExtractedField(value="ACC-CHG", confidence=0.9, source="bill"),
+        bill_date=ExtractedField(value="01/06/2026", confidence=0.9, source="bill"),
+        discom=ExtractedField(value="BESCOM", confidence=0.99, source="bill"),
+        is_bescom_bill=ExtractedField(value=True, confidence=0.99, source="bill"),
+    )
+    mock_extractor = MagicMock()
+    mock_extractor.extract_from_document.return_value = fake
+    repo = BillAnalysisRepository(db_session)
+    use_case = ExtractBillUseCase(
+        settings=settings,
+        extractor=mock_extractor,
+        repository=repo,
+        storage=LocalFileStorage(settings.upload_dir),
+    )
+    extracted = use_case.execute(
+        UploadBillCommand(filename="may.png", content_type="image/png", data=_png_bytes())
+    )
+    assert extracted.analysis_id
+    assert any(
+        i.code == "POTENTIAL_CHARGE_TOTAL_MISMATCH" for i in extracted.consistency.issues
+    )
+
+    confirm = ConfirmBillUseCase(repo)
+    result = confirm.execute(
+        extracted.analysis_id,
+        BillConfirmationRequest(
+            accept_extracted_as_printed=[
+                "energy_charge",
+                "fixed_charge",
+                "electricity_tax",
+                "fppca",
+                "other_charges",
+                "subsidy",
+                "total_amount",
+            ],
+            confirm_category=ConsumerCategory.DOMESTIC,
+        ),
+    )
+    assert result.needs_confirmation == []
+
+
 def test_confirm_rejects_empty_payload(db_session: Session, tmp_path: Path):
     extracted, repo = _extract_weak_bill(db_session, tmp_path)
     confirm = ConfirmBillUseCase(repo)

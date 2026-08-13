@@ -63,8 +63,11 @@ class BillConsistencyResult(BaseModel):
     @computed_field  # type: ignore[prop-decorator]
     @property
     def fields_needing_confirmation(self) -> list[str]:
+        """Only WARNING/ERROR discrepancies block user confirmation."""
         fields: list[str] = []
         for issue in self.issues:
+            if issue.severity == ConsistencySeverity.INFO:
+                continue
             for name in issue.fields:
                 if name not in fields:
                     fields.append(name)

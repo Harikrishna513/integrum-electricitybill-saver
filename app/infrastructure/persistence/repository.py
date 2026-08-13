@@ -149,6 +149,7 @@ class BillAnalysisRepository:
         classification: CategoryClassificationResult,
         consistency: BillConsistencyResult,
         notes: str | None = None,
+        corrections_audit: list[dict] | None = None,
     ) -> StoredBillAnalysis:
         """
         Milestone 24 — overwrite JSON snapshots + scalar columns after user confirm.
@@ -176,7 +177,13 @@ class BillAnalysisRepository:
         row.total_amount = bill.total_amount.value
         row.sanctioned_load = bill.sanctioned_load.value
         row.extraction_json = extraction.model_dump(mode="json")
-        row.validation_json = validation.model_dump(mode="json")
+        validation_payload = validation.model_dump(mode="json")
+        if corrections_audit:
+            existing = validation_payload.get("corrections_audit") or []
+            if not isinstance(existing, list):
+                existing = []
+            validation_payload["corrections_audit"] = existing + corrections_audit
+        row.validation_json = validation_payload
         row.classification_json = classification.model_dump(mode="json")
         row.consistency_json = consistency.model_dump(mode="json")
         row.canonical_bill_json = bill.model_dump(mode="json")

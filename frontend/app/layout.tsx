@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "BESCOM Bill Saver",
+  title: "Integrum Energy — Bill Analysis",
   description:
-    "Karnataka BESCOM bill advisor with VNM / GNM preliminary analysis and official-doc RAG.",
+    "Upload your BESCOM electricity bill for AI-assisted extraction, validation, and consumption analysis.",
 };
 
 export default function RootLayout({
@@ -20,7 +20,7 @@ export default function RootLayout({
           crossOrigin="anonymous"
         />
         <link
-          href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Manrope:wght@400;600;700&display=swap"
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Instrument+Serif:ital@0;1&display=swap"
           rel="stylesheet"
         />
       </head>

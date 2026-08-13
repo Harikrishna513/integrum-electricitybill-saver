@@ -39,13 +39,13 @@ async def lifespan(_app: FastAPI):
 settings = get_settings()
 
 app = FastAPI(
-    title="BESCOM Bill Saver AI",
+    title="Integrum Energy — Bill Analysis",
     description=(
-        "Karnataka / BESCOM residential bill understanding and savings advisor. "
-        "Milestone 24: user confirmation of extracted fields. "
-        "VNM/GNM remain preliminary analysis only."
+        "AI-powered residential electricity bill analysis for Karnataka / BESCOM "
+        "domestic consumers. Extraction is AI-assisted; validation, classification, "
+        "and calculations are deterministic."
     ),
-    version="0.24.0",
+    version="1.0.0",
     lifespan=lifespan,
 )
 
@@ -70,22 +70,17 @@ app.include_router(eval_routes.router)
 @app.get("/")
 def root() -> dict:
     return {
-        "app": "BESCOM Bill Saver AI",
-        "milestone": 24,
-        "message": (
-            "User field confirmation enabled. "
-            "Engines own money; docs own policy text; user confirms OCR gaps."
-        ),
+        "app": "Integrum Energy — Bill Analysis",
+        "module": "bill-analysis",
+        "message": "Karnataka / BESCOM domestic bill upload, extraction, review, and analysis.",
         "docs": "/docs",
-        "rag_sources": "GET /rag/sources",
-        "rag_search": "POST /rag/search",
+        "bill_extract": "POST /bills/extract",
+        "bill_extract_batch": "POST /bills/extract-batch",
         "bill_confirm": "POST /bills/{analysis_id}/confirm",
-        "vnm_analyze": "POST /vnm/analyze",
-        "gnm_analyze": "POST /gnm/analyze",
-        "eval_run": "GET /eval/run",
-        "agent_ask": "POST /agent/ask",
-        "frontend": "See /frontend (Next.js)",
-        "app_v1_supports": ["DOMESTIC"],
-        "discom_scope": ["BESCOM"],
-        "state_scope": ["Karnataka"],
+        "consumer_history": "GET /consumers/{consumer_id}/history",
+        "scope": {
+            "state": "Karnataka",
+            "discom": "BESCOM",
+            "category": "DOMESTIC",
+        },
     }

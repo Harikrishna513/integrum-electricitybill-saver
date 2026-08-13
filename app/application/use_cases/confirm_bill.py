@@ -9,6 +9,7 @@ Flow:
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime, timezone
 
 from app.domain.models.bill_extraction import ElectricityBillExtraction
 from app.domain.models.category import CategoryClassificationResult
@@ -41,14 +42,8 @@ class ConfirmBillResult:
 
     @property
     def needs_confirmation(self) -> list[str]:
-        fields = list(self.validation.fields_needing_confirmation)
-        if self.classification.requires_user_confirmation:
-            if "consumer_category" not in fields:
-                fields.append("consumer_category")
-        for name in self.consistency.fields_needing_confirmation:
-            if name not in fields:
-                fields.append(name)
-        return fields
+        """Post-attestation list — use confirmation payload, not raw re-validation."""
+        return list(self.confirmation.needs_confirmation)
 
 
 class ConfirmBillUseCase:
@@ -84,6 +79,7 @@ class ConfirmBillUseCase:
             raise LookupError(f"Analysis not found: {analysis_id}")
 
         extraction = ElectricityBillExtraction.model_validate(stored.extraction)
+        original = extraction.model_dump(mode="python")
         patched, corrected, accepted = apply_extraction_corrections(extraction, request)
 
         validation = self._validator.validate(patched)
@@ -99,6 +95,14 @@ class ConfirmBillUseCase:
 
         consistency = self._consistency.validate(validation.bill)
 
+        audit_entries = _build_audit_entries(
+            original_extraction=original,
+            patched_extraction=patched.model_dump(mode="python"),
+            corrected=corrected,
+            accepted=accepted,
+            category_confirmed=request.confirm_category.value if request.confirm_category else None,
+        )
+
         updated = self._repository.update_analysis(
             analysis_id,
             extraction=patched,
@@ -106,6 +110,7 @@ class ConfirmBillUseCase:
             classification=classification,
             consistency=consistency,
             notes=request.note,
+            corrections_audit=audit_entries,
         )
 
         needs = list(validation.fields_needing_confirmation)
@@ -114,6 +119,11 @@ class ConfirmBillUseCase:
         for name in consistency.fields_needing_confirmation:
             if name not in needs:
                 needs.append(name)
+
+        attested = set(corrected) | set(accepted)
+        if request.confirm_category is not None:
+            attested.add("consumer_category")
+        needs = [n for n in needs if n not in attested]
 
         confirmation = BillConfirmationApplied(
             analysis_id=analysis_id,
@@ -139,3 +149,60 @@ class ConfirmBillUseCase:
             consistency=consistency,
             confirmation=confirmation,
         )
+
+
+def _build_audit_entries(
+    *,
+    original_extraction: dict,
+    patched_extraction: dict,
+    corrected: list[str],
+    accepted: list[str],
+    category_confirmed: str | None,
+) -> list[dict]:
+    now = datetime.now(timezone.utc).isoformat()
+    entries: list[dict] = []
+
+    for name in corrected:
+        entries.append(
+            {
+                "field": name,
+                "original_value": _field_value(original_extraction, name),
+                "corrected_value": _field_value(patched_extraction, name),
+                "corrected_by_user": True,
+                "corrected_at": now,
+                "action": "corrected",
+            }
+        )
+
+    for name in accepted:
+        entries.append(
+            {
+                "field": name,
+                "original_value": _field_value(original_extraction, name),
+                "corrected_value": _field_value(patched_extraction, name),
+                "corrected_by_user": True,
+                "corrected_at": now,
+                "action": "accepted_as_printed",
+            }
+        )
+
+    if category_confirmed:
+        entries.append(
+            {
+                "field": "consumer_category",
+                "original_value": _field_value(original_extraction, "consumer_category"),
+                "corrected_value": category_confirmed,
+                "corrected_by_user": True,
+                "corrected_at": now,
+                "action": "category_confirmed",
+            }
+        )
+
+    return entries
+
+
+def _field_value(extraction: dict, name: str):
+    field = extraction.get(name) or {}
+    if isinstance(field, dict):
+        return field.get("value")
+    return None

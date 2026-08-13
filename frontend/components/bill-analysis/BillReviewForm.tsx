@@ -1,0 +1,253 @@
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+import type { BillAnalysis, BillField } from "@/lib/bill-analysis";
+import { maskAccount } from "@/lib/bill-analysis";
+
+const HIDDEN_FIELDS = new Set(["extraction_notes"]);
+
+type Props = {
+  analysis: BillAnalysis;
+  busy?: boolean;
+  onConfirm: (payload: {
+    corrections: Record<string, string | number | boolean>;
+    confirm_category: "DOMESTIC";
+    accept_extracted_as_printed: string[];
+  }) => Promise<void>;
+};
+
+export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
+  const [showMeta, setShowMeta] = useState(false);
+  const initial = useMemo(() => buildInitialValues(analysis), [analysis]);
+  const hasChargeMismatch = analysis.consistency_warnings.some((w) =>
+    w.toLowerCase().includes("charge")
+  );
+
+  function handleSubmit(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const corrections: Record<string, string | number | boolean> = {};
+    const accept: string[] = [];
+
+    for (const section of analysis.sections) {
+      for (const field of section.fields) {
+        if (!field.editable || HIDDEN_FIELDS.has(field.name)) continue;
+
+        if (field.name === "account_id") {
+          const real = String(fd.get("account_id_real") ?? field.value ?? "").trim();
+          if (real) {
+            if (field.value != null && String(field.value) === real) {
+              accept.push(field.name);
+            } else {
+              corrections[field.name] = real;
+            }
+          }
+          continue;
+        }
+
+        const raw = String(fd.get(field.name) ?? "").trim();
+        const prior = field.value;
+        if (!raw && (prior === null || prior === undefined || prior === "")) continue;
+
+        if (field.name === "is_bescom_bill") {
+          const boolVal = raw === "true";
+          if (prior !== boolVal) corrections[field.name] = boolVal;
+          else accept.push(field.name);
+          continue;
+        }
+
+        const normalizedRaw = raw.replace(/^[₹Rs.\s]+/i, "").replace(/,/g, "");
+        const num = Number(normalizedRaw);
+        const priorNum =
+          typeof prior === "number"
+            ? prior
+            : typeof prior === "string"
+              ? Number(String(prior).replace(/^[₹Rs.\s]+/i, "").replace(/,/g, ""))
+              : NaN;
+        const isNum = !Number.isNaN(num) && /^-?[\d.]+$/.test(normalizedRaw);
+        const value = isNum ? num : raw;
+        const priorComparable =
+          !Number.isNaN(priorNum) && isNum ? priorNum : prior;
+
+        if (
+          priorComparable !== null &&
+          priorComparable !== undefined &&
+          String(priorComparable) === String(value)
+        ) {
+          accept.push(field.name);
+        } else if (raw) {
+          corrections[field.name] = value;
+        }
+      }
+    }
+
+    void onConfirm({
+      corrections,
+      confirm_category: "DOMESTIC",
+      accept_extracted_as_printed: accept,
+    });
+  }
+
+  return (
+    <form className="review-form" onSubmit={handleSubmit}>
+      <div className="review-header">
+        <h2>Review your bill</h2>
+        <p>
+          We extracted the following information. Please verify before continuing.
+        </p>
+        <button
+          type="button"
+          className="ghost"
+          onClick={() => setShowMeta((v) => !v)}
+        >
+          {showMeta ? "Hide extraction details" : "View extraction details"}
+        </button>
+      </div>
+
+      {hasChargeMismatch && (
+        <div className="alert warn" role="alert">
+          Some charge values may not add up to the total on the bill. Please check{" "}
+          <strong>Total Amount</strong> against your printed bill before confirming.
+          (Your bill shows ₹73 total but charge lines are higher — one value is likely
+          mis-read.)
+        </div>
+      )}
+
+      {analysis.consistency_warnings.map((w) => (
+        <div key={w} className="alert warn" role="alert">
+          {w}
+        </div>
+      ))}
+
+      {analysis.support.block_reasons.map((w) => (
+        <div key={w} className="alert info" role="status">
+          {w}
+        </div>
+      ))}
+
+      {analysis.sections.map((section) => (
+        <section key={section.id} className="field-section">
+          <h3>{section.title}</h3>
+          <div className="field-grid">
+            {section.fields
+              .filter((field) => !HIDDEN_FIELDS.has(field.name))
+              .map((field) => (
+                <FieldInput
+                  key={field.name}
+                  field={field}
+                  defaultValue={initial[field.name]}
+                  showMeta={showMeta}
+                  mask={field.name === "account_id"}
+                  realAccountValue={initial.account_id}
+                />
+              ))}
+          </div>
+        </section>
+      ))}
+
+      <button type="submit" className="cta" disabled={busy}>
+        {busy ? "Saving…" : "Confirm & continue"}
+      </button>
+    </form>
+  );
+}
+
+function FieldInput({
+  field,
+  defaultValue,
+  showMeta,
+  mask,
+  realAccountValue,
+}: {
+  field: BillField;
+  defaultValue: string;
+  showMeta: boolean;
+  mask?: boolean;
+  realAccountValue?: string;
+}) {
+  const levelClass =
+    field.needs_verification
+      ? field.level === "LOW" || field.level === "MISSING"
+        ? "field-risk"
+        : "field-verify"
+      : "";
+
+  if (field.name === "account_id" && realAccountValue) {
+    return (
+      <label className={`field ${levelClass}`}>
+        <span>{field.label}</span>
+        <input
+          readOnly
+          value={maskAccount(realAccountValue)}
+          aria-label="Account ID masked for privacy"
+        />
+        <input type="hidden" name="account_id_real" value={realAccountValue} />
+        <FieldHint field={field} showMeta={showMeta} />
+      </label>
+    );
+  }
+
+  if (field.name === "is_bescom_bill") {
+    return (
+      <label className={`field ${levelClass}`}>
+        <span>{field.label}</span>
+        <select name={field.name} defaultValue={defaultValue || "true"}>
+          <option value="true">Yes</option>
+          <option value="false">No</option>
+        </select>
+        <FieldHint field={field} showMeta={showMeta} />
+      </label>
+    );
+  }
+
+  return (
+    <label className={`field ${levelClass}`}>
+      <span>{field.label}</span>
+      <input
+        name={field.name}
+        defaultValue={defaultValue}
+        placeholder={
+          field.level === "MISSING" ? "Not detected — please enter" : undefined
+        }
+        aria-invalid={field.needs_verification}
+      />
+      <FieldHint field={field} showMeta={showMeta} />
+    </label>
+  );
+}
+
+function FieldHint({ field, showMeta }: { field: BillField; showMeta: boolean }) {
+  if (field.level === "MISSING") {
+    return <small className="field-hint bad">Not detected — please enter</small>;
+  }
+  if (field.needs_verification && field.level === "LOW") {
+    return <small className="field-hint bad">Please verify this value</small>;
+  }
+  if (field.needs_verification) {
+    return <small className="field-hint warn">Please verify</small>;
+  }
+  if (showMeta) {
+    return (
+      <small className="field-hint">
+        {field.source} · {Math.round(field.confidence * 100)}% confidence
+      </small>
+    );
+  }
+  return null;
+}
+
+function buildInitialValues(analysis: BillAnalysis): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const section of analysis.sections) {
+    for (const field of section.fields) {
+      if (field.value === null || field.value === undefined) {
+        out[field.name] = "";
+      } else if (typeof field.value === "boolean") {
+        out[field.name] = field.value ? "true" : "false";
+      } else {
+        out[field.name] = String(field.value);
+      }
+    }
+  }
+  return out;
+}
