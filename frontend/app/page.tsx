@@ -12,7 +12,7 @@ import type {
 import { UploadPanel } from "@/components/bill-analysis/UploadPanel";
 import { ProcessingSteps } from "@/components/bill-analysis/ProcessingSteps";
 import { BillReviewForm } from "@/components/bill-analysis/BillReviewForm";
-import { UnsupportedBillNotice } from "@/components/bill-analysis/UnsupportedBillNotice";
+import { PartialBillNotice } from "@/components/bill-analysis/PartialBillNotice";
 import {
   AnalysisSummary,
   BatchResults,
@@ -47,11 +47,12 @@ export default function BillAnalysisPage() {
   const showReview =
     analysis &&
     analysis.status !== "ready" &&
-    analysis.status !== "unsupported" &&
-    (analysis.status === "needs_review" || analysis.needs_confirmation.length > 0);
+    (analysis.status === "needs_review" ||
+      analysis.status === "unsupported" ||
+      analysis.needs_confirmation.length > 0);
 
-  const showUnsupported =
-    analysis?.status === "unsupported" && analysis.needs_confirmation.length > 0;
+  const showPartialNotice =
+    analysis && analysis.status !== "ready" && !analysis.support.supported;
 
   const handleSingle = useCallback(async (file: File) => {
     setBusy(true);
@@ -150,8 +151,8 @@ export default function BillAnalysisPage() {
 
           <BatchResults items={batchItems} />
 
-          {showUnsupported && analysis && (
-            <UnsupportedBillNotice analysis={analysis} />
+          {showPartialNotice && analysis && (
+            <PartialBillNotice analysis={analysis} />
           )}
 
           {showReview && analysis && (
@@ -160,6 +161,17 @@ export default function BillAnalysisPage() {
               busy={busy}
               onConfirm={handleConfirm}
             />
+          )}
+
+          {analysis?.status === "unsupported" && (
+            <div className="ready-banner error-banner">
+              <h2>Bill could not be analyzed</h2>
+              <p>{analysis.message}</p>
+              <p>
+                After review, this bill still does not meet BESCOM domestic criteria.
+                Upload a full domestic BESCOM bill or contact support.
+              </p>
+            </div>
           )}
 
           {analysis?.status === "ready" && (

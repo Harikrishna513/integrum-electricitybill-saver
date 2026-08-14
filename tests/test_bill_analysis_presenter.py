@@ -48,6 +48,59 @@ def _result() -> ExtractBillResult:
     )
 
 
+def test_partial_bescom_gets_needs_review_not_hard_unsupported():
+    """Partial BESCOM crop: gate closed on extract, but user can still complete the form."""
+    from app.domain.models.category import ClassificationStatus, ConsumerCategory
+
+    extraction = complete_bescom_extraction(
+        units_consumed=ExtractedField(value=248, confidence=0.95, source="bill"),
+        total_amount=ExtractedField(value=2607, confidence=0.95, source="bill"),
+        discom=ExtractedField(value="BESCOM", confidence=0.9, source="bill"),
+        tariff_code=ExtractedField(value=None, confidence=0.0, source="unknown"),
+        consumer_name=ExtractedField(value=None, confidence=0.0, source="unknown"),
+        account_id=ExtractedField(value=None, confidence=0.0, source="unknown"),
+    )
+    validation = BillExtractionValidator().validate(extraction)
+    classification = CategoryClassificationResult(
+        category=ConsumerCategory.UNKNOWN,
+        status=ClassificationStatus.INSUFFICIENT_EVIDENCE,
+        confidence=0.0,
+        signals=[],
+        conflicting_categories=[],
+        supported_by_app_v1=False,
+        requires_user_confirmation=True,
+        rule_version="test",
+        verification_status="test",
+        user_message="Could not determine category.",
+    )
+    consistency = BillConsistencyValidator().validate(validation.bill)
+    result = ExtractBillResult(
+        document=BillDocument(
+            id=uuid4(),
+            original_filename="partial.jpg",
+            stored_filename="partial.jpg",
+            content_type="image/jpeg",
+            size_bytes=100,
+            sha256="abc",
+            kind=DocumentKind.IMAGE,
+            storage_path="/tmp/partial.jpg",
+            created_at=datetime.now(timezone.utc),
+        ),
+        extraction=extraction,
+        validation=validation,
+        classification=classification,
+        consistency=consistency,
+        model_name="test",
+        stored=None,
+        history=None,
+    )
+    view = BillAnalysisPresenter().from_extract(result)
+    assert view.status == "needs_review"
+    assert view.support.supported is False
+    assert "partial" in view.message.lower() or "required fields" in view.message.lower()
+    assert view.sections
+
+
 def test_presenter_groups_sections_and_support():
     view = BillAnalysisPresenter().from_extract(_result())
     assert view.analysis_id == ""

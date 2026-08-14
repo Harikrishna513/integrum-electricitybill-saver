@@ -399,6 +399,16 @@ body {
   margin-bottom: 1.25rem;
 }
 
+.unsupported-panel.partial {
+  border-color: rgba(251, 191, 36, 0.35);
+  background: rgba(251, 191, 36, 0.06);
+}
+
+.error-banner {
+  background: rgba(248, 113, 113, 0.1) !important;
+  border: 1px solid rgba(248, 113, 113, 0.25) !important;
+}
+
 .metric-grid.compact {
   margin-top: 1rem;
 }

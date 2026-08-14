@@ -85,9 +85,42 @@ def build_support_gate(
         ),
         "can_continue_domestic_analysis": domestic_ok,
         "block_reasons": reasons,
-        "user_guidance": (
-            "Continue with Karnataka BESCOM domestic bills only for savings / VNM / GNM."
-            if not supported
-            else "Bill appears eligible for BESCOM domestic analysis engines."
+        "user_guidance": _user_guidance(
+            supported=supported,
+            not_bescom=not_bescom,
+            domestic_ok=domestic_ok,
+            validation=validation,
         ),
     }
+
+
+def _user_guidance(
+    *,
+    supported: bool,
+    not_bescom: bool,
+    domestic_ok: bool,
+    validation: BillValidationResult,
+) -> str:
+    if supported:
+        return "Bill appears eligible for BESCOM domestic analysis engines."
+    bill = validation.bill
+    discom = (bill.discom.value or bill.utility.value or "").upper()
+    bescom_hint = (
+        not not_bescom
+        or bill.is_bescom_bill.value is True
+        or "BESCOM" in discom
+    )
+    if bescom_hint and not domestic_ok:
+        return (
+            "BESCOM appears on this bill, but category or tariff could not be "
+            "confirmed automatically (common with partial photos). Complete the "
+            "review form — enter tariff code, account/RR, and confirm domestic category."
+        )
+    if bescom_hint and not_bescom:
+        return (
+            "This may be a BESCOM bill with incomplete extraction. Set "
+            "'BESCOM Bill' to Yes and fill missing required fields in the review form."
+        )
+    return (
+        "Continue with Karnataka BESCOM domestic bills only for savings / VNM / GNM."
+    )

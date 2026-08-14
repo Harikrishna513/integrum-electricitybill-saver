@@ -116,6 +116,7 @@ class BillAnalysisPresenter:
         needs = result.needs_confirmation
         confirmed = len(needs) == 0
         status = self._status(support_gate, needs, confirmed=False)
+        bescom_hint = _likely_bescom_partial(support_gate, result.validation)
         calculations = self._maybe_calculate(
             result.validation,
             result.consistency,
@@ -125,7 +126,9 @@ class BillAnalysisPresenter:
         return BillAnalysisView(
             analysis_id=result.analysis_id or "",
             status=status,
-            message=self._message(status, support_gate, needs),
+            message=self._message(
+                status, support_gate, needs, is_bescom_hint=bescom_hint
+            ),
             document=result.document.model_dump(mode="json"),
             sections=self._sections(
                 result.extraction, result.validation, needs, result.classification
@@ -184,26 +187,38 @@ class BillAnalysisPresenter:
         *,
         confirmed: bool,
     ) -> str:
-        if not support_gate["supported_for_money_engines"]:
-            return "unsupported"
+        """needs_review until required fields are confirmed; unsupported only after confirm still blocked."""
         if needs:
             return "needs_review"
-        if confirmed:
-            return "ready"
-        return "needs_review"
+        if support_gate["supported_for_money_engines"]:
+            if confirmed:
+                return "ready"
+            return "needs_review"
+        if not confirmed:
+            # Partial / unclear bill — let user complete DISCOM, tariff, category, etc.
+            return "needs_review"
+        return "unsupported"
 
     def _message(
         self,
         status: str,
         support_gate: dict[str, Any],
         needs: list[str],
+        *,
+        is_bescom_hint: bool | None = None,
     ) -> str:
         if status == "unsupported":
             return (
                 support_gate.get("user_guidance")
                 or "This bill is outside the supported Karnataka / BESCOM domestic scope."
             )
-        if needs:
+        if needs or (status == "needs_review" and not support_gate["supported_for_money_engines"]):
+            if is_bescom_hint:
+                return (
+                    "We detected a possible BESCOM bill, but the image may be partial or "
+                    "some details are missing. Please complete and verify the required fields "
+                    "(marked with *) — including DISCOM, tariff code, and account details."
+                )
             return (
                 "We extracted your bill. Please review and confirm the required fields "
                 "(marked with *) before continuing."
@@ -388,6 +403,24 @@ def _load_audit(validation_json: dict[str, Any]) -> list[FieldAuditEntry]:
     if not isinstance(raw, list):
         return []
     return [FieldAuditEntry.model_validate(item) for item in raw]
+
+
+def _likely_bescom_partial(
+    support_gate: dict[str, Any],
+    validation: BillValidationResult,
+) -> bool:
+    """True when bill looks like BESCOM but support gate is not open yet (partial crop, etc.)."""
+    if support_gate.get("supported_for_money_engines"):
+        return False
+    bill = validation.bill
+    if support_gate.get("is_bescom_bill") is True:
+        return True
+    discom = (bill.discom.value or bill.utility.value or "").upper()
+    if "BESCOM" in discom:
+        return True
+    if bill.units_consumed.value is not None and bill.total_amount.value is not None:
+        return support_gate.get("is_bescom_bill") is not False
+    return False
 
 
 def _monthly_summary_message(
