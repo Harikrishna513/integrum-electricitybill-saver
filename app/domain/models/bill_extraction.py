@@ -20,6 +20,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, computed_field
 
+from app.domain.models.bill_field_requirements import REQUIRED_CONFIRMATION_FIELDS
 from app.domain.models.extracted_field import ConfidenceLevel, ExtractedField
 
 
@@ -147,17 +148,7 @@ class ElectricityBillExtraction(BaseModel):
         Fields that usually matter for later analysis and are weak/missing.
         Used to prompt the user to confirm (Milestone 4+ will harden this).
         """
-        critical = (
-            "units_consumed",
-            "total_amount",
-            "bill_date",
-            "rr_number",
-            "account_id",
-            "consumer_category",
-            "tariff_code",
-            "previous_meter_reading",
-            "current_meter_reading",
-        )
+        critical = REQUIRED_CONFIRMATION_FIELDS
         weak: list[str] = []
         data = self.model_dump()
         for name in critical:

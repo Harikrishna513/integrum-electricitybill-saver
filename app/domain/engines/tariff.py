@@ -1,21 +1,3 @@
-"""
-TariffEngine — Milestone 10.
-
-CONCEPT
-  Inputs: discom, category, as_of date, units, load
-        │
-        ▼
-  TariffRuleRepository.get_rule(...)
-        │
-        ▼
-  Deterministic Python charge calculation
-        │
-        ▼
-  TariffCalculationResult (with rule_version + verification_status)
-
-Gemini must never compute these amounts.
-"""
-
 from __future__ import annotations
 
 from datetime import date

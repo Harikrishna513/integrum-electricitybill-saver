@@ -96,8 +96,12 @@ FIELD_SECTIONS: list[tuple[str, str, list[tuple[str, str]]]] = [
     ),
 ]
 
-# Shown in review UI but never required for confirmation.
-OPTIONAL_REVIEW_FIELDS = frozenset({"extraction_notes"})
+from app.domain.models.bill_field_requirements import (
+    HIDDEN_REVIEW_FIELDS,
+    REQUIRED_CONFIRMATION_FIELDS,
+    is_required_for_confirmation,
+    should_show_review_field,
+)
 
 
 class BillAnalysisPresenter:
@@ -123,7 +127,9 @@ class BillAnalysisPresenter:
             status=status,
             message=self._message(status, support_gate, needs),
             document=result.document.model_dump(mode="json"),
-            sections=self._sections(result.extraction, result.validation, needs),
+            sections=self._sections(
+                result.extraction, result.validation, needs, result.classification
+            ),
             support=self._support(support_gate, result.classification),
             validation_issues=self._validation_issues(result.validation),
             consistency_warnings=self._consistency_warnings(result.consistency),
@@ -152,12 +158,14 @@ class BillAnalysisPresenter:
             analysis_id=result.analysis_id,
             status=status,
             message=(
-                "Bill analysis is ready. Your bill has been confirmed."
-                if confirmed
+                _monthly_summary_message(result.validation, calculations)
+                if confirmed and calculations
                 else result.confirmation.message
             ),
             document={"analysis_id": result.analysis_id},
-            sections=self._sections(result.extraction, result.validation, needs),
+            sections=self._sections(
+                result.extraction, result.validation, needs, result.classification
+            ),
             support=self._support(support_gate, result.classification),
             validation_issues=self._validation_issues(result.validation),
             consistency_warnings=self._consistency_warnings(result.consistency),
@@ -197,8 +205,8 @@ class BillAnalysisPresenter:
             )
         if needs:
             return (
-                "We extracted your bill. Please review and confirm the highlighted fields "
-                "before continuing."
+                "We extracted your bill. Please review and confirm the required fields "
+                "(marked with *) before continuing."
             )
         return "Bill analysis is ready."
 
@@ -222,6 +230,7 @@ class BillAnalysisPresenter:
         extraction: ElectricityBillExtraction,
         validation: BillValidationResult,
         needs: list[str],
+        classification: CategoryClassificationResult | None = None,
     ) -> list[BillSectionView]:
         extraction_data = extraction.model_dump()
         bill_data = validation.bill.model_dump()
@@ -230,22 +239,36 @@ class BillAnalysisPresenter:
         for section_id, title, fields in FIELD_SECTIONS:
             field_views: list[BillFieldView] = []
             for name, label in fields:
+                if not should_show_review_field(
+                    name,
+                    extraction_data=extraction_data,
+                    validated_data=bill_data,
+                ):
+                    continue
                 extracted = extraction_data.get(name, {})
                 validated = bill_data.get(name, {})
                 value = validated.get("value")
                 if value is None:
                     value = extracted.get("value")
+                if (
+                    name == "consumer_category"
+                    and (value is None or value == "")
+                    and classification is not None
+                    and classification.category.value != "UNKNOWN"
+                ):
+                    value = classification.category.value.title()
                 confidence = float(
                     validated.get("confidence", extracted.get("confidence", 0.0)) or 0.0
                 )
                 level_raw = validated.get("level", extracted.get("level", "MISSING"))
                 level = str(level_raw.value if hasattr(level_raw, "value") else level_raw)
                 source = str(validated.get("source", extracted.get("source", "unknown")))
-                if name in OPTIONAL_REVIEW_FIELDS:
+                required = is_required_for_confirmation(name)
+                if name in HIDDEN_REVIEW_FIELDS:
                     needs_verify = False
                 elif name in needs:
                     needs_verify = True
-                elif level in {
+                elif required and level in {
                     ConfidenceLevel.LOW.value,
                     ConfidenceLevel.MISSING.value,
                 }:
@@ -263,9 +286,11 @@ class BillAnalysisPresenter:
                         level=level,  # type: ignore[arg-type]
                         source=source,
                         needs_verification=needs_verify,
+                        required=required,
                     )
                 )
-            sections.append(BillSectionView(id=section_id, title=title, fields=field_views))
+            if field_views:
+                sections.append(BillSectionView(id=section_id, title=title, fields=field_views))
         return sections
 
     def _validation_issues(self, validation: BillValidationResult) -> list[ValidationIssueView]:
@@ -292,7 +317,9 @@ class BillAnalysisPresenter:
     ) -> BillCalculationView | None:
         if not supported:
             return None
-        if not confirmed and validation.fields_needing_confirmation:
+        if not confirmed and any(
+            f in validation.fields_needing_confirmation for f in REQUIRED_CONFIRMATION_FIELDS
+        ):
             return None
         return self._calculator.calculate(validation.bill, consistency=consistency)
 
@@ -361,6 +388,22 @@ def _load_audit(validation_json: dict[str, Any]) -> list[FieldAuditEntry]:
     if not isinstance(raw, list):
         return []
     return [FieldAuditEntry.model_validate(item) for item in raw]
+
+
+def _monthly_summary_message(
+    validation: BillValidationResult,
+    calculations: BillCalculationView | None,
+) -> str:
+    bill = validation.bill
+    units = calculations.units_consumed if calculations else bill.units_consumed.value
+    total = calculations.total_amount if calculations else bill.total_amount.value
+    period = bill.billing_period.value
+    if units is not None and total is not None:
+        period_bit = f" for {period}" if period else " this month"
+        return (
+            f"Bill confirmed. You paid ₹{total:,.2f} for {units:g} kWh{period_bit}."
+        )
+    return "Bill analysis is ready. Your bill has been confirmed."
 
 
 def _display(value: Any) -> str:

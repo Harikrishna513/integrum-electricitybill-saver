@@ -23,6 +23,7 @@ from app.api.routes import (
     savings,
     schemes,
     solar,
+    solar_options,
     tariff,
     vnm,
 )
@@ -53,6 +54,7 @@ apply_production_middleware(app, settings)
 
 app.include_router(health.router)
 app.include_router(bills.router)
+app.include_router(solar_options.router)
 app.include_router(consumers.router)
 app.include_router(tariff.router)
 app.include_router(schemes.router)

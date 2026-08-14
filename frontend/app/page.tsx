@@ -12,10 +12,12 @@ import type {
 import { UploadPanel } from "@/components/bill-analysis/UploadPanel";
 import { ProcessingSteps } from "@/components/bill-analysis/ProcessingSteps";
 import { BillReviewForm } from "@/components/bill-analysis/BillReviewForm";
+import { UnsupportedBillNotice } from "@/components/bill-analysis/UnsupportedBillNotice";
 import {
   AnalysisSummary,
   BatchResults,
 } from "@/components/bill-analysis/AnalysisSummary";
+import { SolarOptionsPanel } from "@/components/solar-options/SolarOptionsPanel";
 
 const STEP_DELAY_MS = 450;
 
@@ -44,10 +46,12 @@ export default function BillAnalysisPage() {
 
   const showReview =
     analysis &&
-    (analysis.status === "needs_review" ||
-      analysis.status === "unsupported" ||
-      analysis.needs_confirmation.length > 0) &&
-    analysis.status !== "ready";
+    analysis.status !== "ready" &&
+    analysis.status !== "unsupported" &&
+    (analysis.status === "needs_review" || analysis.needs_confirmation.length > 0);
+
+  const showUnsupported =
+    analysis?.status === "unsupported" && analysis.needs_confirmation.length > 0;
 
   const handleSingle = useCallback(async (file: File) => {
     setBusy(true);
@@ -146,6 +150,10 @@ export default function BillAnalysisPage() {
 
           <BatchResults items={batchItems} />
 
+          {showUnsupported && analysis && (
+            <UnsupportedBillNotice analysis={analysis} />
+          )}
+
           {showReview && analysis && (
             <BillReviewForm
               analysis={analysis}
@@ -156,17 +164,20 @@ export default function BillAnalysisPage() {
 
           {analysis?.status === "ready" && (
             <div className="ready-banner">
-              <h2>Bill analysis ready</h2>
-              <p>
-                Your bill is confirmed and saved. See the summary on the right.
-              </p>
+              <h2>Your monthly bill summary</h2>
+              <p>{analysis.message}</p>
               <ul className="next-steps">
+                <li>Compare solar options below — individual rooftop, VNM, or GNM.</li>
                 <li>Upload more monthly bills (same RR number) to build consumption history.</li>
-                <li>With 3+ bills, trend analysis becomes available in a future release.</li>
-                <li>Solar and savings modules will use this history later — not in this phase.</li>
               </ul>
             </div>
           )}
+
+          {analysis?.status === "ready" &&
+            analysis.support.supported &&
+            analysis.analysis_id && (
+              <SolarOptionsPanel analysisId={analysis.analysis_id} />
+            )}
         </div>
 
         <AnalysisSummary analysis={analysis} />

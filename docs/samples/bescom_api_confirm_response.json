@@ -1,0 +1,87 @@
+{
+  "_description": "Layer C — POST /bills/{analysis_id}/confirm response after user confirms. status = ready.",
+  "message": "Bill analysis is ready. Your bill has been confirmed.",
+  "analysis": {
+    "analysis_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "status": "ready",
+    "message": "Bill analysis is ready. Your bill has been confirmed.",
+    "document": {
+      "analysis_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    },
+    "support": {
+      "supported": true,
+      "state": "Karnataka",
+      "discom": null,
+      "category": "DOMESTIC",
+      "is_bescom_bill": true,
+      "can_analyze": true,
+      "message": "Bill appears eligible for BESCOM domestic analysis engines.",
+      "block_reasons": []
+    },
+    "needs_confirmation": [],
+    "consistency_warnings": [
+      "Meter readings imply 72 units (current 2162 − previous 2090), but units_consumed is 57 (difference -15). The bill contains a value mismatch that should be verified on the original document. This is a detected discrepancy, not proof of a utility billing error."
+    ],
+    "validation_issues": [],
+    "sections": [],
+    "calculations": {
+      "units_consumed": 57.0,
+      "total_amount": 349.67,
+      "cost_per_unit": 6.1346,
+      "charge_lines_sum": 814.24,
+      "charge_total_delta": -464.57,
+      "annualized_units_estimate": 684.0,
+      "annualized_amount_estimate": 4196.04,
+      "notes": [
+        "Cost per unit = total_amount ÷ units_consumed.",
+        "Charge lines do not fully reconcile with total_amount. Verify highlighted fields against the printed bill.",
+        "Annualized estimate assumes this bill represents one typical month.",
+        "Some extracted values do not appear consistent. Please verify them against the original bill."
+      ]
+    },
+    "history": null,
+    "corrections_audit": [
+      {
+        "field": "units_consumed",
+        "original_value": 57,
+        "corrected_value": 57,
+        "corrected_by_user": true,
+        "corrected_at": "2026-08-14T06:00:00.000000Z",
+        "action": "accepted_as_printed"
+      },
+      {
+        "field": "previous_meter_reading",
+        "original_value": 2090,
+        "corrected_value": 2090,
+        "corrected_by_user": true,
+        "corrected_at": "2026-08-14T06:00:00.000000Z",
+        "action": "accepted_as_printed"
+      },
+      {
+        "field": "current_meter_reading",
+        "original_value": 2162,
+        "corrected_value": 2162,
+        "corrected_by_user": true,
+        "corrected_at": "2026-08-14T06:00:00.000000Z",
+        "action": "accepted_as_printed"
+      },
+      {
+        "field": "total_amount",
+        "original_value": 349.67,
+        "corrected_value": 349.67,
+        "corrected_by_user": true,
+        "corrected_at": "2026-08-14T06:00:00.000000Z",
+        "action": "accepted_as_printed"
+      },
+      {
+        "field": "consumer_category",
+        "original_value": "Domestic",
+        "corrected_value": "DOMESTIC",
+        "corrected_by_user": true,
+        "corrected_at": "2026-08-14T06:00:00.000000Z",
+        "action": "category_confirmed"
+      }
+    ],
+    "confirmed": true
+  }
+}

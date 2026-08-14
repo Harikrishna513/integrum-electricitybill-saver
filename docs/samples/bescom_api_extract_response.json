@@ -1,0 +1,113 @@
+{
+  "_description": "Layer B — POST /bills/extract response (Integrum UI shape). Clean BESCOM bill, first upload.",
+  "message": "We extracted your bill. Please review and confirm the highlighted fields before continuing.",
+  "analysis": {
+    "analysis_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "status": "needs_review",
+    "message": "We extracted your bill. Please review and confirm the highlighted fields before continuing.",
+    "document": {
+      "id": "doc-uuid-here",
+      "original_filename": "Jan2026.jpeg",
+      "content_type": "image/jpeg",
+      "size_bytes": 297472,
+      "kind": "image"
+    },
+    "support": {
+      "supported": true,
+      "state": "Karnataka",
+      "discom": null,
+      "category": "DOMESTIC",
+      "is_bescom_bill": true,
+      "can_analyze": true,
+      "message": "Bill appears eligible for BESCOM domestic analysis engines.",
+      "block_reasons": []
+    },
+    "needs_confirmation": [],
+    "consistency_warnings": [
+      "Meter readings imply 72 units (current 2162 − previous 2090), but units_consumed is 57 (difference -15). The bill contains a value mismatch that should be verified on the original document. This is a detected discrepancy, not proof of a utility billing error."
+    ],
+    "validation_issues": [],
+    "sections": [
+      {
+        "id": "consumer",
+        "title": "Consumer Details",
+        "fields": [
+          { "name": "consumer_name", "label": "Consumer Name", "section": "consumer", "value": "SREEDHARA B S", "display_value": "SREEDHARA B S", "confidence": 0.96, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "account_id", "label": "Account ID", "section": "consumer", "value": "123456789377", "display_value": "123456789377", "confidence": 0.94, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "rr_number", "label": "RR Number", "section": "consumer", "value": "7ELGK45173", "display_value": "7ELGK45173", "confidence": 0.97, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "address", "label": "Address", "section": "consumer", "value": "S NO 12, K NO 84/4, SONNATHAMMANHALLI, KRPURA", "display_value": "S NO 12, K NO 84/4, SONNATHAMMANHALLI, KRPURA", "confidence": 0.91, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true }
+        ]
+      },
+      {
+        "id": "connection",
+        "title": "Connection Details",
+        "fields": [
+          { "name": "utility", "label": "Utility", "section": "connection", "value": "BESCOM", "display_value": "BESCOM", "confidence": 0.98, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "discom", "label": "DISCOM", "section": "connection", "value": "BESCOM", "display_value": "BESCOM", "confidence": 0.99, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "consumer_category", "label": "Consumer Category", "section": "connection", "value": "Domestic", "display_value": "Domestic", "confidence": 0.95, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "tariff_code", "label": "Tariff Code", "section": "connection", "value": "LT-1", "display_value": "LT-1", "confidence": 0.96, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "sanctioned_load", "label": "Sanctioned Load (kW)", "section": "connection", "value": 1.0, "display_value": "1", "confidence": 0.9, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true }
+        ]
+      },
+      {
+        "id": "billing",
+        "title": "Billing Details",
+        "fields": [
+          { "name": "billing_period", "label": "Billing Period", "section": "billing", "value": "01/12/2025 - 01/01/2026", "display_value": "01/12/2025 - 01/01/2026", "confidence": 0.95, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "bill_date", "label": "Bill Date", "section": "billing", "value": "2026-01-01", "display_value": "2026-01-01", "confidence": 0.94, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "due_date", "label": "Due Date", "section": "billing", "value": "2026-01-15", "display_value": "2026-01-15", "confidence": 0.93, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true }
+        ]
+      },
+      {
+        "id": "meter",
+        "title": "Meter Details",
+        "fields": [
+          { "name": "previous_meter_reading", "label": "Previous Meter Reading", "section": "meter", "value": 2090.0, "display_value": "2090", "confidence": 0.97, "level": "HIGH", "source": "bill", "needs_verification": true, "editable": true },
+          { "name": "current_meter_reading", "label": "Current Meter Reading", "section": "meter", "value": 2162.0, "display_value": "2162", "confidence": 0.97, "level": "HIGH", "source": "bill", "needs_verification": true, "editable": true },
+          { "name": "units_consumed", "label": "Units Consumed (kWh)", "section": "meter", "value": 57.0, "display_value": "57", "confidence": 0.96, "level": "HIGH", "source": "bill", "needs_verification": true, "editable": true }
+        ]
+      },
+      {
+        "id": "charges",
+        "title": "Charges",
+        "fields": [
+          { "name": "energy_charge", "label": "Energy Charge", "section": "charges", "value": 330.6, "display_value": "330.6", "confidence": 0.94, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "fixed_charge", "label": "Fixed Charge", "section": "charges", "value": 145.0, "display_value": "145", "confidence": 0.94, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "electricity_tax", "label": "Electricity Tax", "section": "charges", "value": 24.01, "display_value": "24.01", "confidence": 0.92, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "fppca", "label": "FPPCA", "section": "charges", "value": 22.23, "display_value": "22.23", "confidence": 0.91, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "other_charges", "label": "Other Charges", "section": "charges", "value": 292.4, "display_value": "292.4", "confidence": 0.88, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "subsidy", "label": "Subsidy", "section": "charges", "value": 0.0, "display_value": "0", "confidence": 0.9, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "arrears", "label": "Arrears", "section": "charges", "value": 0.0, "display_value": "0", "confidence": 0.9, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "late_payment_charge", "label": "Late Payment Charge", "section": "charges", "value": 0.0, "display_value": "0", "confidence": 0.9, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true },
+          { "name": "total_amount", "label": "Total Amount", "section": "charges", "value": 349.67, "display_value": "349.67", "confidence": 0.97, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true }
+        ]
+      },
+      {
+        "id": "document",
+        "title": "Document Information",
+        "fields": [
+          { "name": "document_language", "label": "Language", "section": "document", "value": "Kannada, English", "display_value": "Kannada, English", "confidence": 0.9, "level": "HIGH", "source": "inferred", "needs_verification": false, "editable": true },
+          { "name": "is_bescom_bill", "label": "BESCOM Bill", "section": "document", "value": true, "display_value": "Yes", "confidence": 0.99, "level": "HIGH", "source": "bill", "needs_verification": false, "editable": true }
+        ]
+      }
+    ],
+    "calculations": null,
+    "history": {
+      "consumer_id": "consumer-uuid-7ELGK45173",
+      "bill_count": 1,
+      "ready_for_trend_analysis": false,
+      "bills": [
+        {
+          "analysis_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+          "billing_period": "01/12/2025 - 01/01/2026",
+          "bill_date": "2026-01-01",
+          "units_consumed": 57.0,
+          "total_amount": 349.67
+        }
+      ],
+      "duplicate_warnings": []
+    },
+    "corrections_audit": [],
+    "confirmed": false
+  }
+}

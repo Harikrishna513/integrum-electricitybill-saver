@@ -17,6 +17,7 @@ export type BillField = {
   source: string;
   needs_verification: boolean;
   editable: boolean;
+  required?: boolean;
 };
 
 export type BillSection = {

@@ -42,17 +42,9 @@ from app.domain.services.field_coercion import (
     parse_number,
 )
 
-_CRITICAL_FIELDS = (
-    "units_consumed",
-    "total_amount",
-    "bill_date",
-    "rr_number",
-    "account_id",
-    "consumer_category",
-    "tariff_code",
-    "previous_meter_reading",
-    "current_meter_reading",
-)
+from app.domain.models.bill_field_requirements import REQUIRED_CONFIRMATION_FIELDS
+
+_CRITICAL_FIELDS = tuple(REQUIRED_CONFIRMATION_FIELDS)
 
 
 class BillExtractionValidator:
@@ -409,6 +401,7 @@ class BillExtractionValidator:
             if (
                 issue.severity in (ValidationSeverity.ERROR, ValidationSeverity.WARNING)
                 and issue.field
+                and issue.field in REQUIRED_CONFIRMATION_FIELDS
                 and issue.field not in needed
             ):
                 # Only add field-scoped issues that imply user should look again

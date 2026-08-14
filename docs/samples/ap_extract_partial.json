@@ -1,0 +1,47 @@
+{
+  "_description": "Layer A — Partial extraction for Andhra Pradesh (Southern Power) bill. status becomes unsupported in UI.",
+  "utility": { "value": "SOUTHERN POWER", "confidence": 0.92, "source": "bill", "level": "HIGH" },
+  "discom": {
+    "value": "SOUTHERN POWER DISTRIBUTION COMPANY OF A.P. LTD",
+    "confidence": 0.94,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "consumer_name": { "value": "V RAMIREDDY", "confidence": 0.93, "source": "bill", "level": "HIGH" },
+  "account_id": { "value": "XXXXXXXXX0155", "confidence": 0.88, "source": "bill", "level": "HIGH" },
+  "rr_number": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "address": {
+    "value": "Jammalamadugu Sub ERO, Mylavaram-JML section (Chinna Komerla)",
+    "confidence": 0.85,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "consumer_category": { "value": "LT1", "confidence": 0.8, "source": "bill", "level": "MEDIUM" },
+  "tariff_code": { "value": "LT-1", "confidence": 0.82, "source": "bill", "level": "MEDIUM" },
+  "billing_period": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "bill_date": { "value": "14/05/2026", "confidence": 0.9, "source": "bill", "level": "HIGH" },
+  "due_date": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "previous_meter_reading": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "current_meter_reading": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "units_consumed": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "sanctioned_load": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "energy_charge": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "fixed_charge": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "electricity_tax": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "fppca": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "other_charges": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "subsidy": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "arrears": { "value": 0, "confidence": 0.7, "source": "bill", "level": "MEDIUM" },
+  "late_payment_charge": { "value": null, "confidence": 0.0, "source": "unknown", "level": "MISSING" },
+  "total_amount": { "value": 310, "confidence": 0.91, "source": "bill", "level": "HIGH" },
+  "document_language": { "value": "English", "confidence": 0.88, "source": "inferred", "level": "HIGH" },
+  "is_bescom_bill": { "value": false, "confidence": 0.97, "source": "bill", "level": "HIGH" },
+  "extraction_notes": {
+    "value": "Document is not a BESCOM/Karnataka bill. Many meter and charge line items not visible or readable on this layout.",
+    "confidence": 0.85,
+    "source": "inferred",
+    "level": "HIGH"
+  },
+  "_ui_status_after_extract": "unsupported",
+  "_ui_support_message": "This document does not appear to be a BESCOM / Karnataka bill. Tariff, Gruha Jyothi, solar, VNM and GNM engines are Karnataka-only in v1."
+}

@@ -14,9 +14,10 @@ from PIL import Image
 from app.application.use_cases.extract_bill import ExtractBillUseCase
 from app.application.use_cases.upload_bill import UploadBillCommand
 from app.config.settings import get_settings
-from app.domain.models.bill_extraction import ElectricityBillExtraction
 from app.domain.models.extracted_field import ConfidenceLevel, ExtractedField
+from app.domain.models.bill_extraction import ElectricityBillExtraction
 from app.infrastructure.storage.local_storage import LocalFileStorage
+from tests.fixtures.bescom_extraction import complete_bescom_extraction
 
 
 def _png_bytes(width: int = 40, height: int = 30) -> bytes:
@@ -55,19 +56,15 @@ def test_electricity_bill_extraction_confidence_summary():
     assert "units_consumed" in summary["HIGH"]
     assert "total_amount" in summary["MEDIUM"]
     assert "rr_number" in summary["MISSING"]
-    assert "rr_number" in extraction.low_or_missing_critical_fields()
+    assert "consumer_name" in extraction.low_or_missing_critical_fields()
     assert "units_consumed" not in extraction.low_or_missing_critical_fields()
 
 
 def test_extract_use_case_with_mocked_gemini(settings):
-    fake_extraction = ElectricityBillExtraction(
-        utility=ExtractedField(value="BESCOM", confidence=0.99, source="bill"),
+    fake_extraction = complete_bescom_extraction(
         units_consumed=ExtractedField(value=222, confidence=0.98, source="bill"),
-        total_amount=ExtractedField(value=1834.5, confidence=0.97, source="bill"),
-        tariff_code=ExtractedField(value="LT-1", confidence=0.9, source="bill"),
-        consumer_category=ExtractedField(
-            value="Domestic", confidence=0.92, source="bill"
-        ),
+        previous_meter_reading=ExtractedField(value=1000, confidence=0.9, source="bill"),
+        current_meter_reading=ExtractedField(value=1222, confidence=0.9, source="bill"),
     )
 
     mock_extractor = MagicMock()

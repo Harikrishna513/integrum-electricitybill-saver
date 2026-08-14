@@ -43,6 +43,7 @@ class BillFieldView(BaseModel):
     source: str = "unknown"
     needs_verification: bool = False
     editable: bool = True
+    required: bool = False
 
 
 class BillSectionView(BaseModel):

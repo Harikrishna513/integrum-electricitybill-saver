@@ -24,6 +24,7 @@ from app.domain.services.bill_confirmation import (
 from app.domain.services.bill_consistency_validator import BillConsistencyValidator
 from app.domain.services.bill_extraction_validator import BillExtractionValidator
 from app.domain.services.category_classifier import ConsumerCategoryClassifier
+from app.domain.services.bill_confirmation_needs import compute_needs_confirmation
 from app.infrastructure.persistence.repository import BillAnalysisRepository, StoredBillAnalysis
 
 
@@ -113,17 +114,12 @@ class ConfirmBillUseCase:
             corrections_audit=audit_entries,
         )
 
-        needs = list(validation.fields_needing_confirmation)
-        if classification.requires_user_confirmation and "consumer_category" not in needs:
-            needs.append("consumer_category")
-        for name in consistency.fields_needing_confirmation:
-            if name not in needs:
-                needs.append(name)
-
         attested = set(corrected) | set(accepted)
-        if request.confirm_category is not None:
-            attested.add("consumer_category")
-        needs = [n for n in needs if n not in attested]
+        needs = compute_needs_confirmation(
+            validation,
+            consistency,
+            attested=attested,
+        )
 
         confirmation = BillConfirmationApplied(
             analysis_id=analysis_id,

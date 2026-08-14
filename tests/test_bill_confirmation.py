@@ -24,6 +24,7 @@ from app.domain.services.bill_confirmation import BillConfirmationError
 from app.infrastructure.persistence.db import Base, create_db_engine, reset_db_engine_for_tests
 from app.infrastructure.persistence.repository import BillAnalysisRepository
 from app.infrastructure.storage.local_storage import LocalFileStorage
+from tests.fixtures.bescom_extraction import complete_bescom_extraction
 
 
 def _png_bytes() -> bytes:
@@ -66,18 +67,11 @@ def db_session(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Session:
 
 def _extract_weak_bill(db_session: Session, tmp_path: Path):
     settings = get_settings()
-    fake = ElectricityBillExtraction(
+    fake = complete_bescom_extraction(
         units_consumed=ExtractedField(value=280, confidence=0.4, source="bill"),
-        previous_meter_reading=ExtractedField(value=1000, confidence=0.9, source="bill"),
-        current_meter_reading=ExtractedField(value=1286, confidence=0.9, source="bill"),
-        total_amount=ExtractedField(value=1834.5, confidence=0.9, source="bill"),
-        tariff_code=ExtractedField(value="LT-1", confidence=0.95, source="bill"),
         consumer_category=ExtractedField(value="Domestic", confidence=0.5, source="bill"),
         rr_number=ExtractedField(value="RRCONF1", confidence=0.9, source="bill"),
         account_id=ExtractedField(value="ACCCONF1", confidence=0.9, source="bill"),
-        bill_date=ExtractedField(value="01/08/2026", confidence=0.9, source="bill"),
-        discom=ExtractedField(value="BESCOM", confidence=0.99, source="bill"),
-        is_bescom_bill=ExtractedField(value=True, confidence=0.99, source="bill"),
     )
     mock_extractor = MagicMock()
     mock_extractor.extract_from_document.return_value = fake
@@ -146,7 +140,7 @@ def test_accept_as_printed_bumps_confidence(db_session: Session, tmp_path: Path)
 def test_confirm_clears_charge_mismatch_after_user_attestation(db_session: Session, tmp_path: Path):
     """INFO-level charge/total mismatch should not block confirm after user attests."""
     settings = get_settings()
-    fake = ElectricityBillExtraction(
+    fake = complete_bescom_extraction(
         units_consumed=ExtractedField(value=59, confidence=0.95, source="bill"),
         previous_meter_reading=ExtractedField(value=2370, confidence=0.95, source="bill"),
         current_meter_reading=ExtractedField(value=2429, confidence=0.95, source="bill"),
@@ -157,13 +151,8 @@ def test_confirm_clears_charge_mismatch_after_user_attestation(db_session: Sessi
         other_charges=ExtractedField(value=20.65, confidence=0.95, source="bill"),
         subsidy=ExtractedField(value=91.68, confidence=0.95, source="bill"),
         total_amount=ExtractedField(value=73, confidence=0.95, source="bill"),
-        tariff_code=ExtractedField(value="LT-1", confidence=0.95, source="bill"),
-        consumer_category=ExtractedField(value="Domestic", confidence=0.95, source="bill"),
         rr_number=ExtractedField(value="RR-CHG", confidence=0.9, source="bill"),
         account_id=ExtractedField(value="ACC-CHG", confidence=0.9, source="bill"),
-        bill_date=ExtractedField(value="01/06/2026", confidence=0.9, source="bill"),
-        discom=ExtractedField(value="BESCOM", confidence=0.99, source="bill"),
-        is_bescom_bill=ExtractedField(value=True, confidence=0.99, source="bill"),
     )
     mock_extractor = MagicMock()
     mock_extractor.extract_from_document.return_value = fake

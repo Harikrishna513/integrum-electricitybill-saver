@@ -24,6 +24,7 @@ from app.domain.services.bill_consistency_validator import BillConsistencyValida
 from app.domain.services.bill_extraction_validator import BillExtractionValidator
 from app.domain.services.bill_history import build_history_summary, find_duplicate_warnings
 from app.domain.services.category_classifier import ConsumerCategoryClassifier
+from app.domain.services.bill_confirmation_needs import compute_needs_confirmation
 from app.infrastructure.llm.bill_extractor import BillExtractionError, GeminiBillExtractor
 from app.infrastructure.persistence.repository import BillAnalysisRepository, StoredBillAnalysis
 from app.infrastructure.storage.local_storage import LocalFileStorage
@@ -46,14 +47,7 @@ class ExtractBillResult:
 
     @property
     def needs_confirmation(self) -> list[str]:
-        fields = list(self.validation.fields_needing_confirmation)
-        if self.classification.requires_user_confirmation:
-            if "consumer_category" not in fields:
-                fields.append("consumer_category")
-        for name in self.consistency.fields_needing_confirmation:
-            if name not in fields:
-                fields.append(name)
-        return fields
+        return compute_needs_confirmation(self.validation, self.consistency)
 
 
 class ExtractBillUseCase:

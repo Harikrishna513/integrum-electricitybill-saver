@@ -41,6 +41,9 @@ export function AnalysisSummary({ analysis }: Props) {
 
       {(analysis.status === "ready" || analysis.calculations) && (
         <>
+          {analysis.status === "ready" && analysis.message && (
+            <p className="summary-headline">{analysis.message}</p>
+          )}
           <div className="metric-grid">
             <Metric label="Consumption" value={formatUnits(units as number)} />
             <Metric label="Bill amount" value={formatCurrency(total as number)} />

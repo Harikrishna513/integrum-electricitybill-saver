@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from app.application.services.bill_analysis_presenter import BillAnalysisPresenter
-from app.domain.models.bill_extraction import ElectricityBillExtraction
+from tests.fixtures.bescom_extraction import complete_bescom_extraction
 from app.domain.models.category import CategoryClassificationResult
 from app.domain.models.consistency import BillConsistencyResult, ConsistencyStatus
 from app.domain.models.document import BillDocument, DocumentKind
@@ -18,14 +18,9 @@ from uuid import uuid4
 
 
 def _result() -> ExtractBillResult:
-    extraction = ElectricityBillExtraction(
+    extraction = complete_bescom_extraction(
         units_consumed=ExtractedField(value=42, confidence=0.95, source="bill"),
         total_amount=ExtractedField(value=272, confidence=0.95, source="bill"),
-        tariff_code=ExtractedField(value="LT-1", confidence=0.95, source="bill"),
-        consumer_category=ExtractedField(value="Domestic", confidence=0.95, source="bill"),
-        discom=ExtractedField(value="BESCOM", confidence=0.99, source="bill"),
-        is_bescom_bill=ExtractedField(value=True, confidence=0.99, source="bill"),
-        rr_number=ExtractedField(value="RR123", confidence=0.9, source="bill"),
         bill_date=ExtractedField(value="01/02/2026", confidence=0.9, source="bill"),
     )
     validation = BillExtractionValidator().validate(extraction)
@@ -61,3 +56,8 @@ def test_presenter_groups_sections_and_support():
     assert "Consumer Details" in titles
     assert "Charges" in titles
     assert view.support.state == "Karnataka"
+    charge_fields = next(s for s in view.sections if s.id == "charges").fields
+    assert all(f.name != "subsidy" for f in charge_fields)
+    required = [f for s in view.sections for f in s.fields if f.required]
+    assert "units_consumed" in {f.name for f in required}
+    assert "rr_number" not in {f.name for f in required}

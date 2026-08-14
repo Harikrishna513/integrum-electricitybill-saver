@@ -1,28 +1,3 @@
-"""
-SolarAnalysisEngine — Milestone 14 (individual rooftop).
-
-CONCEPT
-  monthly units + roof + sanctioned load
-        │
-        ▼
-  versioned YAML assumptions (yield, roof density, cost, CFA slabs)
-        │
-        ▼
-  recommend / analyze kWp + estimated generation
-        │
-        ▼
-  simplified offset → residual units → TariffEngine ₹ delta
-        │
-        ▼
-  rough capex / CFA / simple payback (all ESTIMATED)
-
-Never:
-  - invent CFA approval
-  - claim BESCOM sanction
-  - pretend this is full net-metering settlement (that is Milestone 15)
-  - size a plant when there is no usable roof (point to VNM later)
-"""
-
 from __future__ import annotations
 
 from typing import Any

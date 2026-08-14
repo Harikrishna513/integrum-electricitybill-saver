@@ -1,0 +1,178 @@
+{
+  "_description": "Layer A — Raw Gemini structured extraction for a clean Karnataka BESCOM domestic LT-1 bill. Illustrative filled test data.",
+  "utility": {
+    "value": "BESCOM",
+    "confidence": 0.98,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "discom": {
+    "value": "BESCOM",
+    "confidence": 0.99,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "consumer_name": {
+    "value": "SREEDHARA B S",
+    "confidence": 0.96,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "account_id": {
+    "value": "123456789377",
+    "confidence": 0.94,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "rr_number": {
+    "value": "7ELGK45173",
+    "confidence": 0.97,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "address": {
+    "value": "S NO 12, K NO 84/4, SONNATHAMMANHALLI, KRPURA, Bengaluru",
+    "confidence": 0.91,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "consumer_category": {
+    "value": "Domestic",
+    "confidence": 0.95,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "tariff_code": {
+    "value": "LT-1",
+    "confidence": 0.96,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "billing_period": {
+    "value": "01/12/2025 - 01/01/2026",
+    "confidence": 0.95,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "bill_date": {
+    "value": "01/01/2026",
+    "confidence": 0.94,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "due_date": {
+    "value": "15/01/2026",
+    "confidence": 0.93,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "previous_meter_reading": {
+    "value": 2090,
+    "confidence": 0.97,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "current_meter_reading": {
+    "value": 2162,
+    "confidence": 0.97,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "units_consumed": {
+    "value": 57,
+    "confidence": 0.96,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "sanctioned_load": {
+    "value": 1,
+    "confidence": 0.9,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "energy_charge": {
+    "value": 330.6,
+    "confidence": 0.94,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "fixed_charge": {
+    "value": 145.0,
+    "confidence": 0.94,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "electricity_tax": {
+    "value": 24.01,
+    "confidence": 0.92,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "fppca": {
+    "value": 22.23,
+    "confidence": 0.91,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "other_charges": {
+    "value": 292.4,
+    "confidence": 0.88,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "subsidy": {
+    "value": 0,
+    "confidence": 0.9,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "arrears": {
+    "value": 0,
+    "confidence": 0.9,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "late_payment_charge": {
+    "value": 0,
+    "confidence": 0.9,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "total_amount": {
+    "value": 349.67,
+    "confidence": 0.97,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "document_language": {
+    "value": "Kannada, English",
+    "confidence": 0.9,
+    "source": "inferred",
+    "level": "HIGH"
+  },
+  "is_bescom_bill": {
+    "value": true,
+    "confidence": 0.99,
+    "source": "bill",
+    "level": "HIGH"
+  },
+  "extraction_notes": {
+    "value": "Units consumed (57) differs from meter delta (72). Printed units value used. Other charges include P&G Surcharge and Ex.Load/MD Penalty components.",
+    "confidence": 0.85,
+    "source": "inferred",
+    "level": "HIGH"
+  },
+  "confidence_summary": {
+    "HIGH": [
+      "utility", "discom", "consumer_name", "account_id", "rr_number", "address",
+      "consumer_category", "tariff_code", "billing_period", "bill_date", "due_date",
+      "previous_meter_reading", "current_meter_reading", "units_consumed", "sanctioned_load",
+      "energy_charge", "fixed_charge", "electricity_tax", "fppca", "other_charges",
+      "subsidy", "arrears", "late_payment_charge", "total_amount", "document_language",
+      "is_bescom_bill", "extraction_notes"
+    ],
+    "MEDIUM": [],
+    "LOW": [],
+    "MISSING": []
+  }
+}

@@ -1,25 +1,3 @@
-"""
-VNMAnalysisEngine — Milestone 16.
-
-CONCEPT
-  apartment / community participants + proposed plant + procurement shares
-        │
-        ▼
-  versioned SOP checks (category, count, plant min/max, share sum, area)
-        │
-        ▼
-  apportion generation by share %
-        │
-        ▼
-  per-flat residual retail via TariffEngine + surplus @ 75% generic
-        │
-        ▼
-  POTENTIALLY_SUITABLE | UNSUITABLE | INSUFFICIENT | TECHNICAL_VERIFICATION_REQUIRED
-
-Never: "You are approved for VNM."
-Never: clear technical feasibility (always BESCOM).
-"""
-
 from __future__ import annotations
 
 from datetime import date

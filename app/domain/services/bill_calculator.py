@@ -1,15 +1,3 @@
-"""
-Deterministic Bill Analysis calculations — Integrum Energy.
-
-CONCEPT
-  Python computes numbers. AI only explains them later.
-
-This module is intentionally narrow for phase 1:
-  - cost per unit
-  - charge line reconciliation helpers
-  - simple annualization from one monthly bill
-"""
-
 from __future__ import annotations
 
 from app.domain.models.bill_analysis import BillCalculationView

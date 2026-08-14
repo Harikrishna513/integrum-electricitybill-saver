@@ -1,25 +1,3 @@
-"""
-GNMAnalysisEngine — Milestone 17.
-
-CONCEPT
-  same-name consumer RRs + host plant + priority order
-        │
-        ▼
-  SOP checks (count, same name/category, plant min/max, unique priorities)
-        │
-        ▼
-  reserve 20% for host (unused → LAPSED); waterfall remaining by priority
-        │
-        ▼
-  per-RR residual retail via TariffEngine + surplus @ 75% generic
-        │
-        ▼
-  POTENTIALLY_SUITABLE | UNSUITABLE | INSUFFICIENT | TECHNICAL_VERIFICATION_REQUIRED
-
-Never: "You are approved for GNM."
-Never: clear technical feasibility.
-"""
-
 from __future__ import annotations
 
 from datetime import date

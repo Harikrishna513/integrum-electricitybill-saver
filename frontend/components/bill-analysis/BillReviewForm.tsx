@@ -4,8 +4,6 @@ import { FormEvent, useMemo, useState } from "react";
 import type { BillAnalysis, BillField } from "@/lib/bill-analysis";
 import { maskAccount } from "@/lib/bill-analysis";
 
-const HIDDEN_FIELDS = new Set(["extraction_notes"]);
-
 type Props = {
   analysis: BillAnalysis;
   busy?: boolean;
@@ -18,23 +16,24 @@ type Props = {
 
 export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
   const [showMeta, setShowMeta] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const initial = useMemo(() => buildInitialValues(analysis), [analysis]);
-  const hasChargeMismatch = analysis.consistency_warnings.some((w) =>
-    w.toLowerCase().includes("charge")
-  );
 
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    setFormError(null);
     const fd = new FormData(e.currentTarget);
     const corrections: Record<string, string | number | boolean> = {};
     const accept: string[] = [];
+    const missing: string[] = [];
 
     for (const section of analysis.sections) {
       for (const field of section.fields) {
-        if (!field.editable || HIDDEN_FIELDS.has(field.name)) continue;
+        if (!field.editable) continue;
 
         if (field.name === "account_id") {
           const real = String(fd.get("account_id_real") ?? field.value ?? "").trim();
+          if (!real && field.required) missing.push(field.label);
           if (real) {
             if (field.value != null && String(field.value) === real) {
               accept.push(field.name);
@@ -47,6 +46,12 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
 
         const raw = String(fd.get(field.name) ?? "").trim();
         const prior = field.value;
+
+        if (field.required && !raw && (prior === null || prior === undefined || prior === "")) {
+          missing.push(field.label);
+          continue;
+        }
+
         if (!raw && (prior === null || prior === undefined || prior === "")) continue;
 
         if (field.name === "is_bescom_bill") {
@@ -81,6 +86,13 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
       }
     }
 
+    if (missing.length) {
+      setFormError(
+        `Please fill all required fields before continuing: ${missing.join(", ")}.`
+      );
+      return;
+    }
+
     void onConfirm({
       corrections,
       confirm_category: "DOMESTIC",
@@ -93,7 +105,8 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
       <div className="review-header">
         <h2>Review your bill</h2>
         <p>
-          We extracted the following information. Please verify before continuing.
+          We extracted the following information. Please verify required fields
+          (marked with <span className="required-mark">*</span>) before continuing.
         </p>
         <button
           type="button"
@@ -104,12 +117,9 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
         </button>
       </div>
 
-      {hasChargeMismatch && (
-        <div className="alert warn" role="alert">
-          Some charge values may not add up to the total on the bill. Please check{" "}
-          <strong>Total Amount</strong> against your printed bill before confirming.
-          (Your bill shows ₹73 total but charge lines are higher — one value is likely
-          mis-read.)
+      {formError && (
+        <div className="alert bad" role="alert">
+          {formError}
         </div>
       )}
 
@@ -129,18 +139,16 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
         <section key={section.id} className="field-section">
           <h3>{section.title}</h3>
           <div className="field-grid">
-            {section.fields
-              .filter((field) => !HIDDEN_FIELDS.has(field.name))
-              .map((field) => (
-                <FieldInput
-                  key={field.name}
-                  field={field}
-                  defaultValue={initial[field.name]}
-                  showMeta={showMeta}
-                  mask={field.name === "account_id"}
-                  realAccountValue={initial.account_id}
-                />
-              ))}
+            {section.fields.map((field) => (
+              <FieldInput
+                key={field.name}
+                field={field}
+                defaultValue={initial[field.name]}
+                showMeta={showMeta}
+                mask={field.name === "account_id"}
+                realAccountValue={initial.account_id}
+              />
+            ))}
           </div>
         </section>
       ))}
@@ -172,10 +180,20 @@ function FieldInput({
         : "field-verify"
       : "";
 
+  const label = (
+    <>
+      {field.label}
+      {field.required ? <span className="required-mark"> *</span> : null}
+      {!field.required ? (
+        <span className="optional-tag"> (optional)</span>
+      ) : null}
+    </>
+  );
+
   if (field.name === "account_id" && realAccountValue) {
     return (
       <label className={`field ${levelClass}`}>
-        <span>{field.label}</span>
+        <span>{label}</span>
         <input
           readOnly
           value={maskAccount(realAccountValue)}
@@ -190,7 +208,7 @@ function FieldInput({
   if (field.name === "is_bescom_bill") {
     return (
       <label className={`field ${levelClass}`}>
-        <span>{field.label}</span>
+        <span>{label}</span>
         <select name={field.name} defaultValue={defaultValue || "true"}>
           <option value="true">Yes</option>
           <option value="false">No</option>
@@ -202,7 +220,7 @@ function FieldInput({
 
   return (
     <label className={`field ${levelClass}`}>
-      <span>{field.label}</span>
+      <span>{label}</span>
       <input
         name={field.name}
         defaultValue={defaultValue}
@@ -210,6 +228,7 @@ function FieldInput({
           field.level === "MISSING" ? "Not detected — please enter" : undefined
         }
         aria-invalid={field.needs_verification}
+        aria-required={field.required}
       />
       <FieldHint field={field} showMeta={showMeta} />
     </label>
@@ -217,8 +236,11 @@ function FieldInput({
 }
 
 function FieldHint({ field, showMeta }: { field: BillField; showMeta: boolean }) {
+  if (field.level === "MISSING" && field.required) {
+    return <small className="field-hint bad">Required — please enter</small>;
+  }
   if (field.level === "MISSING") {
-    return <small className="field-hint bad">Not detected — please enter</small>;
+    return <small className="field-hint">Not detected on bill</small>;
   }
   if (field.needs_verification && field.level === "LOW") {
     return <small className="field-hint bad">Please verify this value</small>;
