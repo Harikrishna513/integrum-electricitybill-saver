@@ -1,11 +1,3 @@
-"""
-VNM analysis models — Milestone 16.
-
-CRITICAL
-  Never output "You are approved for VNM."
-  Only preliminary suitability / missing info / technical verification required.
-"""
-
 from __future__ import annotations
 
 from datetime import date

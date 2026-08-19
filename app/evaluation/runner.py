@@ -1,11 +1,3 @@
-"""
-Evaluation framework — Milestone 21.
-
-Golden cases for deterministic engines + RAG retrieval.
-Run: pytest tests/test_evaluation.py -q
-Or:  python -m app.evaluation.runner
-"""
-
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field

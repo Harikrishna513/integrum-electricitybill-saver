@@ -1,7 +1,3 @@
-"""
-Metering concepts + settlement API — Milestone 15.
-"""
-
 from __future__ import annotations
 
 from datetime import date

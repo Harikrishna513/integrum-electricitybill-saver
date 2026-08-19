@@ -1,11 +1,3 @@
-"""
-Gruha Jyothi domain models — Milestone 11.
-
-CRITICAL PRODUCT RULE
-  Never output "You are approved for Gruha Jyothi."
-  Only: conditions met / missing / not applicable / estimate.
-"""
-
 from __future__ import annotations
 
 from datetime import date

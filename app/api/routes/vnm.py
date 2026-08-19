@@ -1,7 +1,3 @@
-"""
-VNM preliminary analysis API — Milestone 16.
-"""
-
 from __future__ import annotations
 
 from datetime import date

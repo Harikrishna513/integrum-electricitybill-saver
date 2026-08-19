@@ -1,22 +1,3 @@
-"""
-Domain model for an uploaded bill document (Milestone 2).
-
-CONCEPT
-  A BillDocument is metadata about a file the user uploaded.
-  It is NOT the extracted electricity bill fields yet (that is Milestone 3).
-
-WHY IT EXISTS
-  We need a stable domain object between:
-    API upload  →  storage  →  (later) Gemini extraction
-
-SPRING ANALOGY
-  Like a Document entity / DTO that services pass around — not a JPA table yet.
-
-COMMON MISTAKE
-  Mixing "file stored" with "bill understood".
-  Milestone 2 only proves we can accept and read the file safely.
-"""
-
 from datetime import datetime, timezone
 from enum import Enum
 from uuid import UUID, uuid4

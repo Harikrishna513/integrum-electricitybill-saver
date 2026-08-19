@@ -28,6 +28,7 @@ from app.domain.models.document import BillDocument
 from app.domain.models.extracted_field import ConfidenceLevel
 from app.domain.models.history import BillHistorySummary
 from app.domain.models.validated_bill import BillValidationResult
+from app.domain.services.billing_period import parse_billing_period
 from app.domain.services.bill_calculator import BillCalculator
 
 FIELD_SECTIONS: list[tuple[str, str, list[tuple[str, str]]]] = [
@@ -265,13 +266,6 @@ class BillAnalysisPresenter:
                 value = validated.get("value")
                 if value is None:
                     value = extracted.get("value")
-                if (
-                    name == "consumer_category"
-                    and (value is None or value == "")
-                    and classification is not None
-                    and classification.category.value != "UNKNOWN"
-                ):
-                    value = classification.category.value.title()
                 confidence = float(
                     validated.get("confidence", extracted.get("confidence", 0.0)) or 0.0
                 )
@@ -432,7 +426,19 @@ def _monthly_summary_message(
     total = calculations.total_amount if calculations else bill.total_amount.value
     period = bill.billing_period.value
     if units is not None and total is not None:
-        period_bit = f" for {period}" if period else " this month"
+        period_info = parse_billing_period(period)
+        if period_info.is_multi_month and period_info.approximate_months > 1.0:
+            monthly = (
+                calculations.monthly_units_equivalent
+                if calculations and calculations.monthly_units_equivalent is not None
+                else round(units / period_info.approximate_months, 2)
+            )
+            period_bit = f" for billing period {period}" if period else ""
+            return (
+                f"Bill confirmed. You paid ₹{total:,.2f} for {units:g} kWh{period_bit} "
+                f"(~{period_info.approximate_months:g} months, ~{monthly:g} kWh/month average)."
+            )
+        period_bit = f" for {period}" if period else " this billing period"
         return (
             f"Bill confirmed. You paid ₹{total:,.2f} for {units:g} kWh{period_bit}."
         )

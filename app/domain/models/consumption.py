@@ -1,14 +1,3 @@
-"""
-Consumption analysis models — Milestone 9.
-
-CONCEPT
-  Deterministic stats over a consumer's stored bill timeline.
-
-IMPORTANT
-  Every percentage is calculated in Python.
-  Gemini must not invent "your bill increased 22%".
-"""
-
 from __future__ import annotations
 
 from datetime import date

@@ -1,20 +1,3 @@
-"""
-ConsumerCategoryClassifier — Milestone 5.
-
-CONCEPT
-  Combine multiple bill signals (tariff code, category text) into one category
-  decision. If signals conflict → CATEGORY_CONFLICT (do not guess).
-
-WHY DETERMINISTIC
-  Category gates the rest of the app (v1 = DOMESTIC only).
-  An LLM guess here could silently analyze a commercial bill as residential.
-
-BESCOM EXAMPLE
-  tariff_code=LT-1 + text="Domestic" → DOMESTIC, high confidence
-  tariff_code=LT-3 + text="Residential" → CATEGORY_CONFLICT
-  tariff_code=LT-3 + text="Commercial" → COMMERCIAL, not supported in v1
-"""
-
 from __future__ import annotations
 
 import re

@@ -172,3 +172,67 @@ def test_duplicate_bill_date_warning():
     codes = {w.code for w in warnings}
     assert "POSSIBLE_DUPLICATE_BILL_DATE" in codes
     assert "POSSIBLE_DUPLICATE_BILLING_PERIOD" in codes
+
+
+def test_duplicate_warnings_deduped_by_code_when_multiple_priors_match():
+    incoming = StoredBillAnalysis(
+        id="new",
+        document_id="d3",
+        consumer_id="c1",
+        model_name="gemini-2.5-flash",
+        discom="BESCOM",
+        rr_number="RR1",
+        account_id=None,
+        tariff_code="LT-1",
+        category="DOMESTIC",
+        classification_status="CLASSIFIED",
+        consistency_status="CONSISTENT",
+        supported_by_app_v1=True,
+        billing_period="Jan-2026",
+        bill_date=date(2026, 1, 15),
+        units_consumed=100,
+        total_amount=700,
+        sanctioned_load=None,
+        extraction={},
+        validation={},
+        classification={},
+        consistency={},
+        canonical_bill={},
+        created_at="2026-01-20T00:00:00+00:00",
+    )
+    prior_a = StoredBillAnalysis(
+        id="old-a",
+        document_id="d1",
+        consumer_id="c1",
+        model_name="gemini-2.5-flash",
+        discom="BESCOM",
+        rr_number="RR1",
+        account_id=None,
+        tariff_code="LT-1",
+        category="DOMESTIC",
+        classification_status="CLASSIFIED",
+        consistency_status="CONSISTENT",
+        supported_by_app_v1=True,
+        billing_period="Jan-2026",
+        bill_date=date(2026, 1, 15),
+        units_consumed=90,
+        total_amount=650,
+        sanctioned_load=None,
+        extraction={},
+        validation={},
+        classification={},
+        consistency={},
+        canonical_bill={},
+        created_at="2026-01-10T00:00:00+00:00",
+    )
+    from dataclasses import replace
+
+    prior_b = replace(prior_a, id="old-b", document_id="d2")
+    warnings = find_duplicate_warnings(
+        incoming=incoming,
+        existing_for_consumer=[prior_a, prior_b],
+        incoming_sha256="abc",
+        existing_sha256_by_analysis_id={"old-a": "abc", "old-b": "abc"},
+    )
+    assert len(warnings) == 3
+    assert len({w.code for w in warnings}) == 3

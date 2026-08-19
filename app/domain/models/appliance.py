@@ -1,11 +1,3 @@
-"""
-Appliance analysis models — Milestone 13.
-
-IMPORTANT LANGUAGE
-  Estimated / Approximate / Based on user-provided assumptions.
-  Never present as actual sub-metered appliance percentages.
-"""
-
 from __future__ import annotations
 
 from enum import Enum

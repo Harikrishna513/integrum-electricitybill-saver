@@ -1,7 +1,3 @@
-"""
-GNM preliminary analysis API — Milestone 17.
-"""
-
 from __future__ import annotations
 
 from datetime import date

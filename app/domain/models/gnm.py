@@ -1,11 +1,3 @@
-"""
-GNM analysis models — Milestone 17.
-
-CRITICAL
-  Never output "You are approved for GNM."
-  Same-name consumer, priority waterfall, host 20% / lapse rules.
-"""
-
 from __future__ import annotations
 
 from datetime import date

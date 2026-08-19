@@ -1,34 +1,3 @@
-"""
-UploadBillDocumentUseCase — Milestone 2 orchestration.
-
-CONCEPT
-  One application use case:
-    receive bytes → validate/inspect → store → return BillDocument
-
-WHY A USE CASE CLASS
-  Keeps the FastAPI route thin (Controller).
-  Domain stays free of HTTP / FastAPI types.
-
-SPRING ANALOGY
-  @Service UploadBillService { Document upload(MultipartFile file); }
-
-DATA FLOW
-  UploadBillCommand
-        │
-        ▼
-  LocalFileStorage.save
-        │
-        ▼
-  build_bill_document (validate + inspect)
-        │
-        ▼
-  BillDocument
-
-NOTE
-  We save first with a guessed extension from sniffed content type.
-  If inspection fails after save, we delete the orphan file.
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

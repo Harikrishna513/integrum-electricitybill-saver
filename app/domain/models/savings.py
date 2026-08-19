@@ -1,15 +1,3 @@
-"""
-Savings engine domain models — Milestone 12.
-
-CONCEPT
-  Every ₹ saving must come from:
-    assumed kWh reduction
-      → TariffEngine (old units vs new units)
-      → delta ₹
-
-Never: Gemini invents "You can save ₹1000."
-"""
-
 from __future__ import annotations
 
 from datetime import date

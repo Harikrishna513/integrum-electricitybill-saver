@@ -38,7 +38,7 @@ def build_chat_model(settings: Settings | None = None) -> ChatGoogleGenerativeAI
 
     return ChatGoogleGenerativeAI(
         model=settings.gemini_model,
-        api_key=settings.gemini_api_key.get_secret_value(),
+        api_key=settings.gemini_api_key.get_secret_value() if settings.gemini_api_key else "",
         temperature=0,
     )
 

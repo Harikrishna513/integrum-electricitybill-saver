@@ -1,7 +1,3 @@
-"""
-Savings estimation API — Milestone 12.
-"""
-
 from __future__ import annotations
 
 from datetime import date

@@ -1,13 +1,3 @@
-"""
-Tariff engine domain models — Milestone 10.
-
-CONCEPT
-  Versioned tariff rules + deterministic calculation results.
-
-NEVER
-  Ask Gemini for "latest BESCOM tariff" as source of truth.
-"""
-
 from __future__ import annotations
 
 from datetime import date

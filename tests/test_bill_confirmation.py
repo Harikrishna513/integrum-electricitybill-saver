@@ -197,7 +197,36 @@ def test_confirm_rejects_empty_payload(db_session: Session, tmp_path: Path):
         confirm.execute(extracted.analysis_id, BillConfirmationRequest())
 
 
-def test_confirm_unknown_field(db_session: Session, tmp_path: Path):
+def test_confirm_accepts_empty_consumer_category_when_domestic_confirmed(db_session: Session, tmp_path: Path):
+    """UI may send accept for inferred category display; confirm_category must still work."""
+    settings = get_settings()
+    fake = complete_bescom_extraction(
+        units_consumed=ExtractedField(value=248, confidence=0.95, source="bill"),
+        total_amount=ExtractedField(value=2607, confidence=0.95, source="bill"),
+        consumer_category=ExtractedField(value=None, confidence=0.0, source="unknown"),
+    )
+    mock_extractor = MagicMock()
+    mock_extractor.extract_from_document.return_value = fake
+    repo = BillAnalysisRepository(db_session)
+    extracted = ExtractBillUseCase(
+        settings=settings,
+        extractor=mock_extractor,
+        repository=repo,
+        storage=LocalFileStorage(settings.upload_dir),
+    ).execute(
+        UploadBillCommand(filename="partial.jpg", content_type="image/jpeg", data=_png_bytes())
+    )
+    assert extracted.analysis_id
+    confirm = ConfirmBillUseCase(repo)
+    result = confirm.execute(
+        extracted.analysis_id,
+        BillConfirmationRequest(
+            accept_extracted_as_printed=["units_consumed", "total_amount", "consumer_category"],
+            confirm_category=ConsumerCategory.DOMESTIC,
+        ),
+    )
+    assert result.extraction.consumer_category.value == "Domestic"
+    assert result.extraction.consumer_category.source == "user"
     extracted, repo = _extract_weak_bill(db_session, tmp_path)
     confirm = ConfirmBillUseCase(repo)
     with pytest.raises(BillConfirmationError, match="non-confirmable"):

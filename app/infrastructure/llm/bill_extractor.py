@@ -27,30 +27,11 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from app.config.settings import Settings, get_settings
 from app.domain.models.bill_extraction import ElectricityBillExtraction
 from app.domain.models.document import BillDocument, DocumentKind
+from app.infrastructure.llm.extraction_prompts import (
+    EXTRACTION_SYSTEM_PROMPT,
+    EXTRACTION_USER_PROMPT,
+)
 from app.infrastructure.llm.gemini_client import build_chat_model
-
-EXTRACTION_SYSTEM_PROMPT = """
-You are an expert at reading Karnataka electricity bills, especially BESCOM bills.
-
-Your job is ONLY to extract fields that are visible or clearly labeled on the document.
-
-Rules:
-1. Do NOT calculate charges, tariffs, subsidies, or totals yourself.
-2. Do NOT invent missing values. If a field is not readable, set value=null and confidence=0.
-3. Prefer source="bill" when the value is printed on the document.
-4. Use source="inferred" only if you must lightly normalize an obvious label (rare). Prefer null over guessing.
-5. confidence must reflect readability: sharp clear text ~0.9+, slightly unclear ~0.6-0.8, guessy <0.6.
-6. Keep printed date/period text as shown; do not convert timezones.
-7. For is_bescom_bill.value use "true" or "false" as a string.
-8. If the document is not an electricity bill, still fill what you can and note that in extraction_notes.
-""".strip()
-
-EXTRACTION_USER_PROMPT = """
-Extract structured fields from this electricity bill document into the schema.
-
-Focus on BESCOM / Karnataka residential bills when applicable.
-Return confidence for every field.
-""".strip()
 
 
 class BillExtractionError(RuntimeError):

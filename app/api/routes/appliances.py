@@ -1,7 +1,3 @@
-"""
-Appliance analysis API — Milestone 13.
-"""
-
 from __future__ import annotations
 
 from datetime import date

@@ -29,3 +29,22 @@ def compute_needs_confirmation(
                 needs.append(name)
 
     return filter_confirmation_needs(needs, attested=attested)
+
+
+def attested_fields_from_audit(audit: list | None) -> set[str]:
+    """Field names the user corrected or accepted during bill confirmation."""
+    if not isinstance(audit, list):
+        return set()
+    fields: set[str] = set()
+    for entry in audit:
+        if isinstance(entry, dict):
+            name = entry.get("field")
+            if name:
+                fields.add(str(name))
+    return fields
+
+
+def attested_fields_from_stored_validation(validation_payload: dict | object) -> set[str]:
+    if isinstance(validation_payload, dict):
+        return attested_fields_from_audit(validation_payload.get("corrections_audit"))
+    return set()

@@ -1,9 +1,3 @@
-"""
-Apply user field corrections onto an extraction snapshot — Milestone 24.
-
-Deterministic: no LLM. Patch ExtractedField values → re-validate downstream.
-"""
-
 from __future__ import annotations
 
 from typing import Any
@@ -50,6 +44,9 @@ def apply_extraction_corrections(
                 f"Unknown or non-confirmable field for accept_as_printed: {name}"
             )
         if name in corrected:
+            continue
+        if name == "consumer_category" and request.confirm_category is not None:
+            # Category attestation stamps this field below; skip accept on empty OCR.
             continue
         current = ExtractedField.model_validate(data[name])
         if current.value is None or current.value == "":

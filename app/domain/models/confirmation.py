@@ -1,27 +1,7 @@
-"""
-User bill confirmation — Milestone 24.
-
-CONCEPT
-  Extraction can be wrong or incomplete. The consumer (or operator) may
-  correct typed fields. Those overrides become source="user" facts, then
-  deterministic validation / classification / consistency re-run.
-
-WHY
-  Money engines must not run on LOW-confidence OCR guesses when the user
-  can fix units, RR number, or category in one step.
-
-SPRING ANALOGY
-  Like a PATCH DTO on a Bill aggregate, followed by re-validation.
-"""
-
 from __future__ import annotations
-
 from typing import Any
-
 from pydantic import BaseModel, Field
-
 from app.domain.models.category import ConsumerCategory
-
 
 # Fields the confirm API may patch (subset of ElectricityBillExtraction).
 CONFIRMABLE_FIELDS: frozenset[str] = frozenset(

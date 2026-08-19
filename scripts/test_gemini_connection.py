@@ -1,12 +1,3 @@
-"""
-Smoke-test Gemini using .env configuration.
-
-Usage (from project root, with venv active):
-  python scripts/test_gemini_connection.py
-
-This script is for learning — it prints the full flow clearly.
-"""
-
 from __future__ import annotations
 
 import sys

@@ -1,14 +1,8 @@
-"""
-Health endpoints — prove the process is up and (optionally) Gemini works.
-
-SPRING ANALOGY
-  Like Actuator /health, plus a custom Gemini connectivity check.
-"""
-
 from fastapi import APIRouter, HTTPException
 
 from app.config.settings import get_settings
 from app.infrastructure.llm.gemini_client import ping_gemini
+from app.infrastructure.llm.mistral_ocr_client import ping_mistral_ocr
 
 router = APIRouter(tags=["health"])
 
@@ -23,8 +17,12 @@ def health() -> dict:
         "status": "ok",
         "app": "bescom-bill-saver-ai",
         "env": settings.app_env,
+        "bill_extraction_provider": settings.bill_extraction_provider,
+        "bill_extraction_fallback": settings.bill_extraction_fallback,
         "gemini_model": settings.gemini_model,
-        # Never return the API key
+        "mistral_ocr_model": settings.mistral_ocr_model,
+        "mistral_model": settings.mistral_model,
+        # Never return API keys
     }
 
 
@@ -44,6 +42,26 @@ def health_gemini() -> dict:
             detail={
                 "status": "error",
                 "message": "Gemini connection failed",
+                "error_type": type(exc).__name__,
+                "error": str(exc),
+            },
+        ) from exc
+
+
+@router.get("/health/mistral-ocr")
+def health_mistral_ocr() -> dict:
+    """
+    Live Mistral Document AI OCR smoke test — costs ~1 OCR page.
+  """
+    try:
+        result = ping_mistral_ocr()
+        return {"status": "ok", **result}
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "status": "error",
+                "message": "Mistral OCR connection failed",
                 "error_type": type(exc).__name__,
                 "error": str(exc),
             },

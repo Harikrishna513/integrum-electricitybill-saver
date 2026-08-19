@@ -1,10 +1,3 @@
-"""
-Metering arrangement models — Milestone 15.
-
-Net / Gross settlement estimates for individual rooftop.
-VNM / GNM are conceptual placeholders until Milestones 16 / 17.
-"""
-
 from __future__ import annotations
 
 from datetime import date

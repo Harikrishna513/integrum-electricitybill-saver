@@ -1,18 +1,3 @@
-"""
-Extracted field with confidence — reusable building block.
-
-CONCEPT
-  Every important bill value is not just a number/string.
-  It is: value + how sure we are + where it came from.
-
-WHY
-  OCR/vision can misread "286" as "288". Showing confidence lets the UI ask
-  the user to confirm instead of silently trusting a wrong unit count.
-
-SPRING ANALOGY
-  Like a ValueObject wrapping a field — not a raw String/Double on the entity.
-"""
-
 from __future__ import annotations
 
 from enum import Enum

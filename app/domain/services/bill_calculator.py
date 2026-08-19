@@ -3,6 +3,10 @@ from __future__ import annotations
 from app.domain.models.bill_analysis import BillCalculationView
 from app.domain.models.consistency import BillConsistencyResult
 from app.domain.models.validated_bill import CanonicalElectricityBill, ParseStatus
+from app.domain.services.billing_period import (
+    normalize_period_consumption,
+    parse_billing_period,
+)
 
 
 class BillCalculator:
@@ -33,13 +37,32 @@ class BillCalculator:
 
         annualized_units = None
         annualized_amount = None
+        monthly_equiv = units
+        period_months = 1.0
+        is_multi_month = False
         if units is not None:
-            annualized_units = round(units * 12, 2)
-            notes.append(
-                "Annualized estimate assumes this bill represents one typical month."
-            )
+            period_info = parse_billing_period(bill.billing_period.value)
+            monthly_equiv, period_note = normalize_period_consumption(float(units), period_info)
+            period_months = period_info.approximate_months
+            is_multi_month = period_info.is_multi_month
+            if is_multi_month and period_months > 1.0:
+                annualized_units = round(monthly_equiv * 12, 2)
+                notes.append(
+                    f"Bill covers ~{period_months:g} months — {units:g} kWh is the period total, "
+                    f"not single-month consumption (~{monthly_equiv:g} kWh/month average)."
+                )
+                if period_note:
+                    notes.append(period_note)
+            else:
+                annualized_units = round(units * 12, 2)
+                notes.append(
+                    "Annualized estimate assumes this bill represents one typical month."
+                )
         if total is not None:
-            annualized_amount = round(total * 12, 2)
+            if is_multi_month and period_months > 1.0:
+                annualized_amount = round((total / period_months) * 12, 2)
+            else:
+                annualized_amount = round(total * 12, 2)
 
         if consistency and consistency.has_discrepancy:
             notes.append(
@@ -55,6 +78,9 @@ class BillCalculator:
             charge_total_delta=charge_total_delta,
             annualized_units_estimate=annualized_units,
             annualized_amount_estimate=annualized_amount,
+            monthly_units_equivalent=monthly_equiv if units is not None else None,
+            billing_period_months=period_months,
+            is_multi_month_period=is_multi_month,
             notes=notes,
         )
 

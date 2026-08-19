@@ -1,14 +1,3 @@
-"""
-Consumer category classification models — Milestone 5.
-
-CONCEPT
-  Decide DOMESTIC / COMMERCIAL / … from bill signals.
-  Do NOT silently treat a commercial bill as residential.
-
-SPRING ANALOGY
-  Like a domain Policy / Classifier service returning a ClassificationResult DTO.
-"""
-
 from __future__ import annotations
 
 from enum import Enum

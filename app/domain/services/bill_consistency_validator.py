@@ -1,23 +1,3 @@
-"""
-BillConsistencyValidator — Milestone 6.
-
-CONCEPT
-  After per-field validation (M4) and category classification (M5),
-  check whether related numbers agree with each other.
-
-CHECKS
-  1. current_meter_reading >= previous_meter_reading (when both present)
-  2. (current - previous) ~= units_consumed (tolerance)
-  3. Optional soft check: sum of printed charge lines ~= total_amount
-
-LANGUAGE RULE
-  Never say: "BESCOM overcharged you."
-  Say: "The bill contains a value mismatch that should be verified."
-
-SPRING ANALOGY
-  Like a domain invariant checker / business rule validator on an aggregate.
-"""
-
 from __future__ import annotations
 
 from app.domain.models.consistency import (
@@ -119,21 +99,28 @@ class BillConsistencyValidator:
         if charge_sum is not None and total is not None and len(present_fields) >= 2:
             checks_performed.append("charge_lines_vs_total")
             diff = abs(charge_sum - total)
+            has_subsidy = "subsidy" in present_fields
+            severity = ConsistencySeverity.INFO
+            if diff > self._amount_tolerance:
+                # Large mismatch — especially common on Gruha Jyothi bills — must block confirm.
+                severity = ConsistencySeverity.WARNING
+            if has_subsidy and diff > self._amount_tolerance * 2:
+                severity = ConsistencySeverity.WARNING
             if diff > self._amount_tolerance:
                 issues.append(
                     ConsistencyIssue(
                         code="POTENTIAL_CHARGE_TOTAL_MISMATCH",
-                        severity=ConsistencySeverity.INFO,
+                        severity=severity,
                         fields=[*present_fields, "total_amount"],
                         expected_value=round(charge_sum, 2),
                         observed_value=total,
                         difference=round(total - charge_sum, 2),
                         message=(
                             f"Sum of extracted charge lines is approximately ₹{charge_sum:.2f}, "
-                            f"but total_amount is ₹{total:.2f}. "
-                            "Missing line items or extraction gaps are common — "
-                            "please verify on the original bill. "
-                            "This is not proof of a utility billing error."
+                            f"but total_amount (net payable) is ₹{total:.2f}. "
+                            "On Gruha Jyothi bills, verify the printed Net Payable / "
+                            "Current Demand amount — not Sub-Total lines. "
+                            f"Difference ₹{diff:.2f}."
                         ),
                     )
                 )

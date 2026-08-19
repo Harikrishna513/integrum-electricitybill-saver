@@ -1,21 +1,3 @@
-"""
-Canonical electricity bill extraction schema (Milestone 3).
-
-CONCEPT
-  Stable internal schema for BESCOM bill fields — independent of bill layout.
-
-WHY
-  BESCOM layouts change. We must NOT parse "line 17 = units".
-  Gemini reads semantically → fills this schema.
-
-IMPORTANT
-  This is EXTRACTION only (what the document appears to say).
-  It is NOT tariff calculation. Do not ask Gemini to recompute charges.
-
-SPRING ANALOGY
-  Like a BillExtractionDto returned from an OCR adapter before domain validation.
-"""
-
 from __future__ import annotations
 
 from pydantic import BaseModel, Field, computed_field

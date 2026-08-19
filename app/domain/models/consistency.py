@@ -1,16 +1,3 @@
-"""
-Bill consistency models — Milestone 6.
-
-CONCEPT
-  Cross-field arithmetic checks on the validated bill.
-  Example: current_reading - previous_reading vs units_consumed.
-
-CRITICAL PRODUCT RULE
-  A mismatch is a DETECTED DISCREPANCY to verify.
-  It is NOT proof that BESCOM overcharged the customer.
-  OCR/extraction errors are a common cause.
-"""
-
 from __future__ import annotations
 
 from enum import Enum

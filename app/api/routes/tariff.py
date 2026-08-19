@@ -1,7 +1,3 @@
-"""
-Tariff calculation API — Milestone 10.
-"""
-
 from __future__ import annotations
 
 from datetime import date

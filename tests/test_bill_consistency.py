@@ -122,11 +122,11 @@ def test_charge_sum_soft_mismatch():
     )
     result = BillConsistencyValidator().validate(bill)
     assert any(i.code == "POTENTIAL_CHARGE_TOTAL_MISMATCH" for i in result.issues)
-    assert result.fields_needing_confirmation == []
+    assert "total_amount" in result.fields_needing_confirmation
     msg = next(
         i for i in result.issues if i.code == "POTENTIAL_CHARGE_TOTAL_MISMATCH"
     ).message
-    assert "billing error" in msg.lower()
+    assert "billing error" in msg.lower() or "net payable" in msg.lower()
     assert "overcharg" not in msg.lower()
 
 

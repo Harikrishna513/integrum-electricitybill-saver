@@ -62,8 +62,8 @@ export function PartialBillNotice({ analysis }: Props) {
           )}
         </div>
       )}
-      {analysis.support.block_reasons.map((reason) => (
-        <p key={reason} className="summary-note warn">
+      {analysis.support.block_reasons.map((reason, i) => (
+        <p key={`block-${i}`} className="summary-note warn">
           {reason}
         </p>
       ))}

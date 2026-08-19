@@ -1,17 +1,3 @@
-"""
-Bill history domain models — Milestone 8.
-
-CONCEPT
-  Multiple normalized bills linked to one consumer over time.
-
-WHY
-  Single-bill analysis is useful; history enables later consumption trends (M9).
-
-NOT IN THIS MILESTONE
-  MoM %, YoY, averages as "insights engine" — that is Milestone 9.
-  Here we store, link, list, and detect likely duplicate periods.
-"""
-
 from __future__ import annotations
 
 from datetime import date

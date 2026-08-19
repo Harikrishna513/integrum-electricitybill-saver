@@ -1,7 +1,3 @@
-"""
-Gruha Jyothi scheme API — Milestone 11.
-"""
-
 from __future__ import annotations
 
 from datetime import date

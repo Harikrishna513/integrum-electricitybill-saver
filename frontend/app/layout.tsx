@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Integrum Energy — Bill Analysis",
+  title: "Integrum Energy - Bill Analysis",
   description:
     "Upload your BESCOM electricity bill for AI-assisted extraction, validation, and consumption analysis.",
 };

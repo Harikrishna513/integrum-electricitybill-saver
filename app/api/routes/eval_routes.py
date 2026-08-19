@@ -1,7 +1,3 @@
-"""
-Evaluation API — Milestone 21.
-"""
-
 from __future__ import annotations
 
 from fastapi import APIRouter

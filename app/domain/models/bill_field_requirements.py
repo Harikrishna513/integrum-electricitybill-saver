@@ -1,11 +1,3 @@
-"""
-Bill Analysis field requirements — Module 1 review / confirm gate.
-
-Required fields must be present and verified before calculations run.
-Optional fields are shown when extracted but never block confirmation.
-Subsidy is shown only when detected on the bill image.
-"""
-
 from __future__ import annotations
 
 from typing import Any

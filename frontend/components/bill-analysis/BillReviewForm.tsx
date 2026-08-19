@@ -7,6 +7,7 @@ import { maskAccount } from "@/lib/bill-analysis";
 type Props = {
   analysis: BillAnalysis;
   busy?: boolean;
+  editing?: boolean;
   onConfirm: (payload: {
     corrections: Record<string, string | number | boolean>;
     confirm_category: "DOMESTIC";
@@ -14,7 +15,7 @@ type Props = {
   }) => Promise<void>;
 };
 
-export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
+export function BillReviewForm({ analysis, busy, editing, onConfirm }: Props) {
   const [showMeta, setShowMeta] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const initial = useMemo(() => buildInitialValues(analysis), [analysis]);
@@ -32,10 +33,16 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
         if (!field.editable) continue;
 
         if (field.name === "account_id") {
-          const real = String(fd.get("account_id_real") ?? field.value ?? "").trim();
+          const real = String(
+            fd.get("account_id_real") ?? fd.get("account_id") ?? field.value ?? ""
+          ).trim();
           if (!real && field.required) missing.push(field.label);
           if (real) {
-            if (field.value != null && String(field.value) === real) {
+            if (
+              field.value != null &&
+              field.value !== "" &&
+              String(field.value) === real
+            ) {
               accept.push(field.name);
             } else {
               corrections[field.name] = real;
@@ -46,6 +53,12 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
 
         const raw = String(fd.get(field.name) ?? "").trim();
         const prior = field.value;
+
+        // Optional — domestic category is attested via confirm_category, not this field.
+        if (field.name === "consumer_category") {
+          if (raw) corrections[field.name] = raw;
+          continue;
+        }
 
         if (field.required && !raw && (prior === null || prior === undefined || prior === "")) {
           missing.push(field.label);
@@ -73,6 +86,12 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
         const value = isNum ? num : raw;
         const priorComparable =
           !Number.isNaN(priorNum) && isNum ? priorNum : prior;
+
+        // Not on bill — user entry is a correction, not accept-as-printed.
+        if (field.level === "MISSING" && raw) {
+          corrections[field.name] = value;
+          continue;
+        }
 
         if (
           priorComparable !== null &&
@@ -103,10 +122,11 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
   return (
     <form className="review-form" onSubmit={handleSubmit}>
       <div className="review-header">
-        <h2>Review your bill</h2>
+        <h2>{editing ? "Edit bill details" : "Review your bill"}</h2>
         <p>
-          We extracted the following information. Please verify required fields
-          (marked with <span className="required-mark">*</span>) before continuing.
+          {editing
+            ? "Update any extracted value that does not match your printed bill — especially Net Payable / Total Amount on Gruha Jyothi bills."
+            : "We extracted the following information. Please verify required fields (marked with * ) before continuing."}
         </p>
         <button
           type="button"
@@ -123,14 +143,14 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
         </div>
       )}
 
-      {analysis.consistency_warnings.map((w) => (
-        <div key={w} className="alert warn" role="alert">
+      {analysis.consistency_warnings.map((w, i) => (
+        <div key={`consistency-${i}`} className="alert warn" role="alert">
           {w}
         </div>
       ))}
 
-      {analysis.support.block_reasons.map((w) => (
-        <div key={w} className="alert info" role="status">
+      {analysis.support.block_reasons.map((w, i) => (
+        <div key={`block-${i}`} className="alert info" role="status">
           {w}
         </div>
       ))}
@@ -147,6 +167,7 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
                 showMeta={showMeta}
                 mask={field.name === "account_id"}
                 realAccountValue={initial.account_id}
+                inferredCategory={analysis.support.category}
               />
             ))}
           </div>
@@ -154,7 +175,7 @@ export function BillReviewForm({ analysis, busy, onConfirm }: Props) {
       ))}
 
       <button type="submit" className="cta" disabled={busy}>
-        {busy ? "Saving…" : "Confirm & continue"}
+        {busy ? "Saving…" : editing ? "Save changes" : "Confirm & continue"}
       </button>
     </form>
   );
@@ -166,12 +187,14 @@ function FieldInput({
   showMeta,
   mask,
   realAccountValue,
+  inferredCategory,
 }: {
   field: BillField;
   defaultValue: string;
   showMeta: boolean;
   mask?: boolean;
   realAccountValue?: string;
+  inferredCategory?: string | null;
 }) {
   const levelClass =
     field.needs_verification
@@ -190,16 +213,32 @@ function FieldInput({
     </>
   );
 
-  if (field.name === "account_id" && realAccountValue) {
+  if (field.name === "account_id") {
+    if (realAccountValue) {
+      return (
+        <label className={`field ${levelClass}`}>
+          <span>{label}</span>
+          <input
+            readOnly
+            value={maskAccount(realAccountValue)}
+            aria-label="Account ID masked for privacy"
+          />
+          <input type="hidden" name="account_id_real" value={realAccountValue} />
+          <FieldHint field={field} showMeta={showMeta} />
+        </label>
+      );
+    }
     return (
       <label className={`field ${levelClass}`}>
         <span>{label}</span>
         <input
-          readOnly
-          value={maskAccount(realAccountValue)}
-          aria-label="Account ID masked for privacy"
+          name="account_id_real"
+          defaultValue={defaultValue}
+          placeholder="Not detected — please enter"
+          aria-invalid={field.needs_verification}
+          aria-required={field.required}
+          autoComplete="off"
         />
-        <input type="hidden" name="account_id_real" value={realAccountValue} />
         <FieldHint field={field} showMeta={showMeta} />
       </label>
     );
@@ -225,19 +264,38 @@ function FieldInput({
         name={field.name}
         defaultValue={defaultValue}
         placeholder={
-          field.level === "MISSING" ? "Not detected — please enter" : undefined
+          field.name === "consumer_category" && !defaultValue && inferredCategory
+            ? `Inferred from tariff: ${inferredCategory} (optional)`
+            : field.level === "MISSING"
+              ? "Not detected — please enter"
+              : undefined
         }
         aria-invalid={field.needs_verification}
         aria-required={field.required}
       />
-      <FieldHint field={field} showMeta={showMeta} />
+      <FieldHint field={field} showMeta={showMeta} inferredCategory={inferredCategory} />
     </label>
   );
 }
 
-function FieldHint({ field, showMeta }: { field: BillField; showMeta: boolean }) {
+function FieldHint({
+  field,
+  showMeta,
+  inferredCategory,
+}: {
+  field: BillField;
+  showMeta: boolean;
+  inferredCategory?: string | null;
+}) {
   if (field.level === "MISSING" && field.required) {
     return <small className="field-hint bad">Required — please enter</small>;
+  }
+  if (field.level === "MISSING" && field.name === "consumer_category" && inferredCategory) {
+    return (
+      <small className="field-hint">
+        Inferred from tariff: {inferredCategory}. Leave blank — domestic is confirmed on submit.
+      </small>
+    );
   }
   if (field.level === "MISSING") {
     return <small className="field-hint">Not detected on bill</small>;

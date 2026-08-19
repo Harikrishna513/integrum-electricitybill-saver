@@ -1,12 +1,3 @@
-"""
-Production hardening helpers — Milestone 23.
-
-- CORS
-- Request ID middleware
-- Security headers
-- Non-BESCOM / unsupported-category gate for bill pipeline
-"""
-
 from __future__ import annotations
 
 import time

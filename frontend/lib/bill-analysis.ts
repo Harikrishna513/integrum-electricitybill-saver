@@ -45,6 +45,9 @@ export type BillCalculation = {
   charge_total_delta: number | null;
   annualized_units_estimate: number | null;
   annualized_amount_estimate: number | null;
+  monthly_units_equivalent: number | null;
+  billing_period_months?: number;
+  is_multi_month_period?: boolean;
   notes: string[];
 };
 
@@ -124,7 +127,7 @@ export const PROCESSING_LABELS: Record<ProcessingStep, string> = {
   reading: "Reading bill…",
   extracting: "Extracting details…",
   validating: "Validating…",
-  checking: "Checking BESCOM eligibility…",
+  checking: "Analyzing with AI (may take 30–60s)…",
   review: "Ready for review",
   ready: "Analysis ready",
   error: "Processing failed",

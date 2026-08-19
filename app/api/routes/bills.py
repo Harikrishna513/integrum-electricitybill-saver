@@ -1,10 +1,3 @@
-"""
-Bill Analysis API — Integrum Energy production module.
-
-Reuses existing upload / extract / validate / classify / confirm pipeline.
-Returns UI-friendly DTOs instead of raw milestone payloads.
-"""
-
 from __future__ import annotations
 
 from dataclasses import asdict

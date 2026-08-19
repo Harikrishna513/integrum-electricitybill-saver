@@ -1,10 +1,3 @@
-"""
-Bill Analysis presentation models — Integrum Energy production module.
-
-These DTOs shape API responses for the Bill Analysis UI.
-They do not replace domain models; they describe what the client should render.
-"""
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -78,6 +71,9 @@ class BillCalculationView(BaseModel):
     charge_total_delta: float | None = None
     annualized_units_estimate: float | None = None
     annualized_amount_estimate: float | None = None
+    monthly_units_equivalent: float | None = None
+    billing_period_months: float = 1.0
+    is_multi_month_period: bool = False
     notes: list[str] = Field(default_factory=list)
 
 

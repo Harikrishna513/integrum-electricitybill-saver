@@ -4,6 +4,8 @@ from dataclasses import dataclass
 
 from app.api.middleware import build_support_gate
 from app.application.services.bill_to_solar_inputs import bill_prefill_from_stored
+from app.application.services.solar_intelligence_report import build_solar_intelligence_report
+from app.application.services.vnm_bill_comparison import build_vnm_comparison
 from app.domain.engines.gnm import GNMAnalysisEngine
 from app.domain.engines.solar import SolarAnalysisEngine
 from app.domain.engines.vnm import VNMAnalysisEngine
@@ -13,6 +15,7 @@ from app.domain.models.solar_options import (
     CompareSolarOptionsRequest,
     SolarOptionCard,
     SolarOptionsComparisonView,
+    build_assumed_vnm_participants,
     build_gnm_installations,
     build_gnm_plant,
     build_vnm_participants,
@@ -20,7 +23,10 @@ from app.domain.models.solar_options import (
 )
 from app.domain.models.validated_bill import BillValidationResult
 from app.domain.models.consistency import BillConsistencyResult
-from app.domain.services.bill_confirmation_needs import compute_needs_confirmation
+from app.domain.services.bill_confirmation_needs import (
+    attested_fields_from_stored_validation,
+    compute_needs_confirmation,
+)
 from app.infrastructure.persistence.repository import BillAnalysisRepository, StoredBillAnalysis
 
 
@@ -57,8 +63,9 @@ class CompareSolarOptionsUseCase:
             options=[],
             disclaimer=_DISCLAIMER,
             message=(
-                "Your bill is confirmed. Compare individual rooftop solar, "
-                "Virtual Net Metering (VNM), and Group Net Metering (GNM) options."
+                "Your bill is confirmed. Compare your current BESCOM bill with "
+                "Virtual Net Metering (VNM) via Integrum Energy — based only on "
+                "your confirmed consumption and sanctioned load."
             ),
         )
 
@@ -87,11 +94,24 @@ class CompareSolarOptionsUseCase:
         best = _pick_best_option(options)
         message = _comparison_message(options, best)
 
+        vnm_comparison = None
+        if request.include_vnm:
+            vnm_comparison = build_vnm_comparison(
+                stored,
+                prefill,
+                expected_vnm_solar_credit_kwh=request.expected_vnm_solar_credit_kwh,
+            )
+
+        options = _attach_intelligence_reports(
+            options, prefill, vnm_comparison=vnm_comparison
+        )
+
         view = SolarOptionsComparisonView(
             analysis_id=analysis_id,
             prefill=prefill,
             options=options,
             best_option=best,
+            vnm_comparison=vnm_comparison,
             disclaimer=_DISCLAIMER,
             message=message,
         )
@@ -113,11 +133,12 @@ class CompareSolarOptionsUseCase:
                 or "This bill is outside supported Karnataka / BESCOM domestic scope."
             )
 
-        needs = compute_needs_confirmation(validation, consistency)
+        attested = attested_fields_from_stored_validation(stored.validation)
+        needs = compute_needs_confirmation(validation, consistency, attested=attested)
         if needs:
             raise SolarOptionsError(
                 "Complete bill review and confirm all required fields before "
-                "comparing solar options."
+                f"comparing solar options. Still needed: {', '.join(needs)}."
             )
         return stored
 
@@ -156,7 +177,10 @@ class CompareSolarOptionsUseCase:
         )
 
     def _run_vnm(self, prefill, request, proposed_kwp, extras) -> SolarOptionCard:
-        participants = build_vnm_participants(prefill, extras)
+        if extras:
+            participants = build_vnm_participants(prefill, extras)
+        else:
+            participants = build_assumed_vnm_participants(prefill)
         plant = build_vnm_plant(request.plant, proposed_kwp)
         result = self._vnm.analyze(
             participants=participants,
@@ -226,6 +250,24 @@ def _pick_best_option(options: list[SolarOptionCard]) -> str | None:
         return None
     best = max(suitable, key=lambda o: o.monthly_saving_inr or 0)
     return best.option
+
+
+def _attach_intelligence_reports(
+    options: list[SolarOptionCard],
+    prefill,
+    *,
+    vnm_comparison=None,
+) -> list[SolarOptionCard]:
+    updated: list[SolarOptionCard] = []
+    for opt in options:
+        report = build_solar_intelligence_report(
+            opt,
+            prefill,
+            address=prefill.address,
+            vnm_comparison=vnm_comparison if opt.option == "vnm" else None,
+        )
+        updated.append(opt.model_copy(update={"intelligence_report": report}))
+    return updated
 
 
 def _comparison_message(options: list[SolarOptionCard], best: str | None) -> str:

@@ -1,7 +1,3 @@
-"""
-Solar analysis API — Milestone 14 (individual rooftop).
-"""
-
 from __future__ import annotations
 
 from datetime import date

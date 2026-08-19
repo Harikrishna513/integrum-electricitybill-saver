@@ -1,23 +1,3 @@
-"""
-BillExtractionValidator — Milestone 4.
-
-CONCEPT
-  ElectricityBillExtraction (AI, messy)
-        │
-        ▼
-  BillExtractionValidator (Python, deterministic)
-        │
-        ▼
-  BillValidationResult
-    - CanonicalElectricityBill (typed)
-    - issues[]
-    - fields_needing_confirmation[]
-
-WHY SEPARATE FROM MILESTONE 6
-  Milestone 4 = type/range/normalize each field.
-  Milestone 6 = cross-field consistency (readings vs units).
-"""
-
 from __future__ import annotations
 
 from app.domain.models.bill_extraction import ElectricityBillExtraction

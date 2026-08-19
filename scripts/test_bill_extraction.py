@@ -1,11 +1,3 @@
-"""
-Manual smoke test: extract a real BESCOM bill with Gemini.
-
-Usage:
-  .\.venv\Scripts\Activate.ps1
-  python scripts/test_bill_extraction.py path\to\bill.jpg
-"""
-
 from __future__ import annotations
 
 import json
@@ -39,9 +31,10 @@ def main() -> int:
     print("=" * 60)
     print("MILESTONE 3 — LIVE BILL EXTRACTION")
     print("=" * 60)
-    print(f"file   : {path}")
-    print(f"model  : {settings.gemini_model}")
-    print(f"bytes  : {len(data)}")
+    print(f"file     : {path}")
+    print(f"provider : {settings.bill_extraction_provider}")
+    print(f"pipeline : {settings.mistral_ocr_model if settings.bill_extraction_provider == 'mistral_ocr' else settings.gemini_model}")
+    print(f"bytes    : {len(data)}")
 
     use_case = ExtractBillUseCase(settings)
     result = use_case.execute(

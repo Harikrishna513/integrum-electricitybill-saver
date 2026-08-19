@@ -1,10 +1,3 @@
-"""
-ExtractBillUseCase — Milestones 3–8.
-
-Flow:
-  Upload → extract → validate → classify → consistency → persist → history context
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -25,7 +18,8 @@ from app.domain.services.bill_extraction_validator import BillExtractionValidato
 from app.domain.services.bill_history import build_history_summary, find_duplicate_warnings
 from app.domain.services.category_classifier import ConsumerCategoryClassifier
 from app.domain.services.bill_confirmation_needs import compute_needs_confirmation
-from app.infrastructure.llm.bill_extractor import BillExtractionError, GeminiBillExtractor
+from app.infrastructure.llm.bill_extractor import BillExtractionError
+from app.infrastructure.llm.extractor_factory import BillExtractorPort, get_bill_extractor
 from app.infrastructure.persistence.repository import BillAnalysisRepository, StoredBillAnalysis
 from app.infrastructure.storage.local_storage import LocalFileStorage
 
@@ -55,7 +49,7 @@ class ExtractBillUseCase:
         self,
         settings: Settings,
         uploader: UploadBillDocumentUseCase | None = None,
-        extractor: GeminiBillExtractor | None = None,
+        extractor: BillExtractorPort | None = None,
         validator: BillExtractionValidator | None = None,
         classifier: ConsumerCategoryClassifier | None = None,
         consistency_validator: BillConsistencyValidator | None = None,
@@ -65,7 +59,7 @@ class ExtractBillUseCase:
         self._settings = settings
         storage = storage or LocalFileStorage(settings.upload_dir)
         self._uploader = uploader or UploadBillDocumentUseCase(settings, storage)
-        self._extractor = extractor or GeminiBillExtractor(settings)
+        self._extractor = extractor or get_bill_extractor(settings)
         self._validator = validator or BillExtractionValidator()
         self._classifier = classifier or ConsumerCategoryClassifier()
         self._consistency = consistency_validator or BillConsistencyValidator()
@@ -92,7 +86,7 @@ class ExtractBillUseCase:
                 validation=validation,
                 classification=classification,
                 consistency=consistency,
-                model_name=self._settings.gemini_model,
+                model_name=self._extraction_model_label(),
             )
             history = self._build_history_after_save(stored, document.sha256)
 
@@ -102,7 +96,7 @@ class ExtractBillUseCase:
             validation=validation,
             classification=classification,
             consistency=consistency,
-            model_name=self._settings.gemini_model,
+            model_name=self._extraction_model_label(),
             stored=stored,
             history=history,
         )
@@ -113,6 +107,17 @@ class ExtractBillUseCase:
         Each bill is stored and linked to its consumer when RR/account is present.
         """
         return [self.execute(command) for command in commands]
+
+    def _extraction_model_label(self) -> str:
+        provider = self._settings.bill_extraction_provider
+        if provider == "mistral_ocr":
+            fb = "+gemini-fallback" if self._settings.bill_extraction_fallback else ""
+            return (
+                f"{self._settings.mistral_ocr_model}->{self._settings.gemini_model}{fb}"
+            )
+        if provider == "mistral":
+            return self._settings.mistral_model
+        return self._settings.gemini_model
 
     def _build_history_after_save(
         self,

@@ -1,0 +1,94 @@
+{
+  "pages": [
+    {
+      "index": 0,
+      "markdown": "[tbl-0.md](tbl-0.md)\n\nನಿಗದಿತ ಶುಲ್ಕ (ಪರಿಮಾಣ, ದರ, ಮೊತ್ತ)\n\n[tbl-1.md](tbl-1.md)\n\n[tbl-2.md](tbl-2.md)\n\nಪಾವತಿಸಬೇಕಾದ ಮೊತ್ತ (₹) 2607.00\nಪಾವತಿಗೆ ಕಡೆ ದಿನಾಂಕ 16-06-2023",
+      "images": [],
+      "dimensions": {
+        "dpi": 200,
+        "height": 1200,
+        "width": 900
+      },
+      "tables": [
+        {
+          "id": "tbl-0.md",
+          "content": "|  ದಾ.ವಿ.ಪ್ರಮಾಣ | 0.96KW  |\n| --- | --- |\n|  ಓದುವ ದಿನಾಂಕ | 02-06-2023  |\n|  ಬಿಲ್ ನೀಡಿದ ದಿನಾಂಕ | 06-06-2023 13:23  |\n|  ಬಿಲ್ ಸಂಖ್ಯೆ | 87451601  |\n|  ಹಾಲಿ ಮಾಪನ | 12996.00  |\n|  ಹಿಂದಿನ ಮಾಪನ | 12748.00  |\n|  ಬಳಕೆ | 248  |\n|  ಮಾಪಕ ಸ್ಥಿರಾಂಕ | 1.00  |\n|  ಪಿ.ಎಫ್ | 0.85  |",
+          "format": "markdown",
+          "word_confidence_scores": null
+        },
+        {
+          "id": "tbl-1.md",
+          "content": "|  3.00 | 110.00 | 330.00  |\n| --- | --- | --- |\n|  ವಿದ್ಯುತ್ ಶುಲ್ಕ (ಪರಿಮಾಣ, ದರ, ಮೊತ್ತ) |  |   |\n|  248.00 | 7.00 | 1736.00  |\n|  ಇಂ.ಹೊ.ಮೊತ್ತ (ಪರಿಮಾಣ, ದರ, ಮೊತ್ತ) |  |   |\n|  248 | 0.00 | 0.00  |",
+          "format": "markdown",
+          "word_confidence_scores": null
+        },
+        {
+          "id": "tbl-2.md",
+          "content": "|  ಪಿ.ಎಫ್.ದಂಡ | 0.00  |\n| --- | --- |\n|  ಅಧಿಕ ಪ್ರಮಾಣ ದಂಡ | 0.00  |\n|  ರಿಯಾಯಿತಿ | Rural -74.40  |\n|  ಬಡ್ಡಿ | 0.00  |\n|  ರೇವಣಿ ಮೇಲಿನ ಬಡ್ಡಿ (IOD) | -32.73  |\n|  ಇತರೆ | Other Charges 491.54  |\n|  ತೆರಿಗೆ | 156.24  |\n|  ಬಿಲ್ ಮೊತ್ತ | 2606.65  |\n|  ಬಾಕಿ | 0.00  |\n|  ಸರ್ಕಾರದ ಸಹಾಯಧನ | 0.00  |",
+          "format": "markdown",
+          "word_confidence_scores": null
+        }
+      ],
+      "hyperlinks": [],
+      "header": null,
+      "footer": null,
+      "confidence_scores": null,
+      "blocks": [
+        {
+          "top_left_x": 132,
+          "top_left_y": 2,
+          "bottom_right_x": 797,
+          "bottom_right_y": 302,
+          "content": "|  ದಾ.ವಿ.ಪ್ರಮಾಣ | 0.96KW  |\n| --- | --- |\n|  ಓದುವ ದಿನಾಂಕ | 02-06-2023  |\n|  ಬಿಲ್ ನೀಡಿದ ದಿನಾಂಕ | 06-06-2023 13:23  |\n|  ಬಿಲ್ ಸಂಖ್ಯೆ | 87451601  |\n|  ಹಾಲಿ ಮಾಪನ | 12996.00  |\n|  ಹಿಂದಿನ ಮಾಪನ | 12748.00  |\n|  ಬಳಕೆ | 248  |\n|  ಮಾಪಕ ಸ್ಥಿರಾಂಕ | 1.00  |\n|  ಪಿ.ಎಫ್ | 0.85  |",
+          "confidence_scores": null,
+          "type": "table",
+          "table_id": "tbl-0.md"
+        },
+        {
+          "top_left_x": 132,
+          "top_left_y": 338,
+          "bottom_right_x": 554,
+          "bottom_right_y": 380,
+          "content": "ನಿಗದಿತ ಶುಲ್ಕ (ಪರಿಮಾಣ, ದರ, ಮೊತ್ತ)",
+          "confidence_scores": null,
+          "type": "text"
+        },
+        {
+          "top_left_x": 132,
+          "top_left_y": 380,
+          "bottom_right_x": 716,
+          "bottom_right_y": 542,
+          "content": "|  3.00 | 110.00 | 330.00  |\n| --- | --- | --- |\n|  ವಿದ್ಯುತ್ ಶುಲ್ಕ (ಪರಿಮಾಣ, ದರ, ಮೊತ್ತ) |  |   |\n|  248.00 | 7.00 | 1736.00  |\n|  ಇಂ.ಹೊ.ಮೊತ್ತ (ಪರಿಮಾಣ, ದರ, ಮೊತ್ತ) |  |   |\n|  248 | 0.00 | 0.00  |",
+          "confidence_scores": null,
+          "type": "table",
+          "table_id": "tbl-1.md"
+        },
+        {
+          "top_left_x": 91,
+          "top_left_y": 590,
+          "bottom_right_x": 824,
+          "bottom_right_y": 1016,
+          "content": "|  ಪಿ.ಎಫ್.ದಂಡ | 0.00  |\n| --- | --- |\n|  ಅಧಿಕ ಪ್ರಮಾಣ ದಂಡ | 0.00  |\n|  ರಿಯಾಯಿತಿ | Rural -74.40  |\n|  ಬಡ್ಡಿ | 0.00  |\n|  ರೇವಣಿ ಮೇಲಿನ ಬಡ್ಡಿ (IOD) | -32.73  |\n|  ಇತರೆ | Other Charges 491.54  |\n|  ತೆರಿಗೆ | 156.24  |\n|  ಬಿಲ್ ಮೊತ್ತ | 2606.65  |\n|  ಬಾಕಿ | 0.00  |\n|  ಸರ್ಕಾರದ ಸಹಾಯಧನ | 0.00  |",
+          "confidence_scores": null,
+          "type": "table",
+          "table_id": "tbl-2.md"
+        },
+        {
+          "top_left_x": 95,
+          "top_left_y": 1052,
+          "bottom_right_x": 811,
+          "bottom_right_y": 1154,
+          "content": "ಪಾವತಿಸಬೇಕಾದ ಮೊತ್ತ (₹) 2607.00\nಪಾವತಿಗೆ ಕಡೆ ದಿನಾಂಕ 16-06-2023",
+          "confidence_scores": null,
+          "type": "text"
+        }
+      ]
+    }
+  ],
+  "model": "mistral-ocr-latest",
+  "usage_info": {
+    "pages_processed": 1,
+    "doc_size_bytes": 212026
+  },
+  "document_annotation": null
+}

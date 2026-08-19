@@ -41,7 +41,11 @@ electricity_tax:
   percent: 9.0
 
 surcharges:
-  - code: EXAMPLE_SURCHARGE
-    description: Example per-unit surcharge for learning (not official)
+  - code: FPPCA
+    description: Fuel & Power Purchase Cost Adjustment
     model: per_kwh
-    rate_per_kwh: 0.50
+    rate_per_kwh: 0.46
+  - code: PG_SURCHARGE
+    description: P & G surcharge
+    model: per_kwh
+    rate_per_kwh: 0.35

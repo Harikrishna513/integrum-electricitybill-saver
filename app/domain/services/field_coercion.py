@@ -1,19 +1,3 @@
-"""
-Field coercion helpers — deterministic parsing of messy extracted values.
-
-CONCEPT
-  Convert OCR/LLM text into typed Python values.
-
-EXAMPLES
-  "₹1,834.50" → 1834.50
-  "286 units" → 286.0
-  "12/07/2026" → date(2026, 7, 12)
-  "LT 1" → "LT-1" (light tariff code normalize)
-
-WHY NOT GEMINI
-  Parsing money/dates must be reproducible in tests without an API key.
-"""
-
 from __future__ import annotations
 
 import re

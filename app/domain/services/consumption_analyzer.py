@@ -1,22 +1,3 @@
-"""
-ConsumptionAnalyzer — Milestone 9.
-
-CONCEPT
-  BillHistorySummary / dated bills
-        │
-        ▼
-  ConsumptionAnalyzer (pure Python)
-        │
-        ▼
-  averages, min/max, MoM, YoY, trend, insights
-
-WHY NOT GEMINI
-  "Increased 22%" must be reproducible in tests from known inputs.
-
-SPRING ANALOGY
-  Like a domain DomainService / Calculator with no I/O.
-"""
-
 from __future__ import annotations
 
 from datetime import date

@@ -18,8 +18,9 @@ COMMON MISTAKE
 """
 
 from functools import lru_cache
+from typing import Literal
 
-from pydantic import Field, SecretStr
+from pydantic import Field, SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -27,7 +28,7 @@ class Settings(BaseSettings):
     """
     Typed settings validated at startup.
 
-    If GEMINI_API_KEY is missing, the app fails fast with a clear error
+    If the active bill extraction provider's API key is missing, the app fails fast
     instead of crashing later inside LangChain with a vague message.
     """
 
@@ -40,8 +41,36 @@ class Settings(BaseSettings):
     app_env: str = Field(default="development", alias="APP_ENV")
     log_level: str = Field(default="INFO", alias="LOG_LEVEL")
 
-    gemini_api_key: SecretStr = Field(..., alias="GEMINI_API_KEY")
-    gemini_model: str = Field(default="gemini-2.5-flash", alias="GEMINI_MODEL")
+    bill_extraction_provider: Literal["gemini", "mistral", "mistral_ocr"] = Field(
+        default="gemini",
+        alias="BILL_EXTRACTION_PROVIDER",
+        description="gemini=vision | mistral_ocr=Mistral OCR 3 + Gemini parse (recommended) | mistral=legacy Pixtral vision",
+    )
+
+    bill_extraction_fallback: bool = Field(
+        default=True,
+        alias="BILL_EXTRACTION_FALLBACK",
+        description="If primary OCR fails, retry with Gemini vision.",
+    )
+
+    gemini_api_key: SecretStr | None = Field(default=None, alias="GEMINI_API_KEY")
+    gemini_model: str = Field(
+        default="gemini-2.5-flash",
+        alias="GEMINI_MODEL",
+        description="Structured field parsing, summaries, and agent chat.",
+    )
+
+    mistral_api_key: SecretStr | None = Field(default=None, alias="MISTRAL_API_KEY")
+    mistral_ocr_model: str = Field(
+        default="mistral-ocr-latest",
+        alias="MISTRAL_OCR_MODEL",
+        description="Mistral Document AI OCR — aliases: mistral-ocr-3.0, mistral-ocr-2512.",
+    )
+    mistral_model: str = Field(
+        default="pixtral-large-latest",
+        alias="MISTRAL_MODEL",
+        description="Legacy Pixtral vision when BILL_EXTRACTION_PROVIDER=mistral.",
+    )
 
     database_url: str = Field(
         default="sqlite:///./data/bescom_bill_saver.db",
@@ -91,6 +120,23 @@ class Settings(BaseSettings):
                 "application/pdf",
             }
         )
+
+    @model_validator(mode="after")
+    def _require_provider_api_key(self) -> "Settings":
+        if self.bill_extraction_provider == "gemini" and not self.gemini_api_key:
+            raise ValueError(
+                "GEMINI_API_KEY is required when BILL_EXTRACTION_PROVIDER=gemini"
+            )
+        if self.bill_extraction_provider in ("mistral", "mistral_ocr") and not self.mistral_api_key:
+            raise ValueError(
+                "MISTRAL_API_KEY is required when BILL_EXTRACTION_PROVIDER is mistral or mistral_ocr"
+            )
+        if self.bill_extraction_provider == "mistral_ocr" and not self.gemini_api_key:
+            raise ValueError(
+                "GEMINI_API_KEY is required when BILL_EXTRACTION_PROVIDER=mistral_ocr "
+                "(Gemini parses OCR text into bill fields; also used for summaries)."
+            )
+        return self
 
 
 @lru_cache

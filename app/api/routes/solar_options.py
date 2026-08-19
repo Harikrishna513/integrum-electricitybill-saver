@@ -1,5 +1,3 @@
-"""Solar options API — Module 2 (post bill confirm)."""
-
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException

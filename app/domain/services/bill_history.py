@@ -1,13 +1,3 @@
-"""
-Bill history helpers — Milestone 8.
-
-CONCEPT
-  Build a chronological timeline for one consumer.
-  Detect likely duplicate bills (same period / same file hash).
-
-Deterministic only — no Gemini.
-"""
-
 from __future__ import annotations
 
 from app.domain.models.history import (
@@ -126,14 +116,14 @@ def find_duplicate_warnings(
                 )
             )
 
-    # De-dupe warning codes per matched id
+    # One warning per duplicate type — multiple prior bills may trigger the same message.
     unique: list[DuplicateBillWarning] = []
-    seen: set[tuple[str, str | None]] = set()
+    seen_codes: set[str] = set()
     for w in warnings:
-        key = (w.code, w.matched_analysis_id)
-        if key not in seen:
-            seen.add(key)
-            unique.append(w)
+        if w.code in seen_codes:
+            continue
+        seen_codes.add(w.code)
+        unique.append(w)
     return unique
 
 

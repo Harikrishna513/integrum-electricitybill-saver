@@ -1,27 +1,3 @@
-"""
-Canonical validated bill — Milestone 4.
-
-CONCEPT
-  Gemini returns messy values:
-    units = "286"
-    amount = "₹1,834.50"
-    date = "12/07/2026"
-
-  After Milestone 4 we have typed, normalized values PLUS the raw extraction
-  and a list of validation issues.
-
-WHY
-  Downstream engines (tariff, savings) must receive floats/dates, not "₹1,834.50".
-  Normalization is deterministic Python — not another LLM call.
-
-SPRING ANALOGY
-  Like mapping an OCR DTO → domain Bill entity with Bean Validation results.
-
-NOT IN THIS MILESTONE
-  - Consumer category classification (Milestone 5)
-  - Meter reading arithmetic mismatch (Milestone 6)
-"""
-
 from __future__ import annotations
 
 from datetime import date

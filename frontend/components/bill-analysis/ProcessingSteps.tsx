@@ -35,7 +35,7 @@ export function ProcessingSteps({ step }: Props) {
               {s === "reading" && "Reading bill"}
               {s === "extracting" && "Extracting details"}
               {s === "validating" && "Validating"}
-              {s === "checking" && "Checking eligibility"}
+              {s === "checking" && "Analyzing with AI"}
             </span>
           </div>
         );

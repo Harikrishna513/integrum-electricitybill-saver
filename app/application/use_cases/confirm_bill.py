@@ -1,11 +1,3 @@
-"""
-ConfirmBillUseCase — Milestone 24.
-
-Flow:
-  Load stored analysis → apply user corrections → re-validate →
-  re-classify → re-check consistency → persist update
-"""
-
 from __future__ import annotations
 
 from dataclasses import dataclass

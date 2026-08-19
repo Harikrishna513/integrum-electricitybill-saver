@@ -1,12 +1,3 @@
-"""
-Solar analysis models — Milestone 14 (individual rooftop).
-
-IMPORTANT LANGUAGE
-  Estimated / Approximate / Based on assumptions.
-  Never claim BESCOM sanction, CFA approval, or vendor quote accuracy.
-  Net metering settlement detail is Milestone 15 — not here.
-"""
-
 from __future__ import annotations
 
 from datetime import date

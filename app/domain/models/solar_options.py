@@ -1,9 +1,3 @@
-"""
-Solar options comparison — Module 2 presentation models.
-
-After Bill Analysis (Module 1), compare individual rooftop solar vs VNM vs GNM.
-"""
-
 from __future__ import annotations
 
 from datetime import date
@@ -12,6 +6,8 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from app.domain.models.gnm import GNMInstallationInput, GNMPlantInput
+from app.domain.models.solar_intelligence_report import SolarIntelligenceReport
+from app.domain.models.vnm_comparison import VNMComparisonView
 from app.domain.models.vnm import VNMParticipantInput, VNMPlantInput
 
 
@@ -52,15 +48,27 @@ class CompareSolarOptionsRequest(BaseModel):
     plant: SolarOptionsPlantInput = Field(default_factory=SolarOptionsPlantInput)
     vnm_participants: list[VNMParticipantOverride] = Field(default_factory=list)
     gnm_installations: list[GNMInstallationOverride] = Field(default_factory=list)
-    include_individual_solar: bool = True
+    include_individual_solar: bool = False
     include_vnm: bool = True
-    include_gnm: bool = True
+    include_gnm: bool = False
+    expected_vnm_solar_credit_kwh: float | None = Field(
+        default=None,
+        ge=0,
+        description=(
+            "Expected VNM solar credit for the billing period (kWh), from the "
+            "VNM provider/society — not derived from consumption or sanctioned load."
+        ),
+    )
 
 
 class BillSolarPrefill(BaseModel):
     analysis_id: str
     connection_id: str
     consumer_name: str | None = None
+    address: str | None = None
+    # Raw kWh on the bill for the full billing period (may span >1 month).
+    period_units_kwh: float
+    # Average kWh/month when period spans multiple months; else same as period_units.
     monthly_units: float
     sanctioned_load_kw: float
     current_monthly_bill_inr: float | None = None
@@ -71,6 +79,10 @@ class BillSolarPrefill(BaseModel):
     suggested_plant_kwp: float | None = None
     bill_date: str | None = None
     billing_period: str | None = None
+    billing_period_days: int | None = None
+    billing_period_months: float = 1.0
+    is_multi_month_period: bool = False
+    period_consumption_note: str | None = None
 
 
 class SolarOptionCard(BaseModel):
@@ -84,6 +96,7 @@ class SolarOptionCard(BaseModel):
     missing_inputs: list[str] = Field(default_factory=list)
     warnings: list[str] = Field(default_factory=list)
     result: dict[str, Any] = Field(default_factory=dict)
+    intelligence_report: SolarIntelligenceReport | None = None
 
 
 class SolarOptionsComparisonView(BaseModel):
@@ -91,8 +104,37 @@ class SolarOptionsComparisonView(BaseModel):
     prefill: BillSolarPrefill
     options: list[SolarOptionCard] = Field(default_factory=list)
     best_option: Literal["individual_solar", "vnm", "gnm"] | None = None
+    vnm_comparison: VNMComparisonView | None = None
     disclaimer: str
     message: str
+
+
+def build_assumed_vnm_participants(
+    prefill: BillSolarPrefill,
+    *,
+    typical_flats: int = 20,
+) -> list[VNMParticipantInput]:
+    """Society model — user does not enter neighbour details."""
+    flats = max(2, typical_flats)
+    user_share = round(100.0 / flats, 4)
+    other_share = round(100.0 - user_share, 4)
+    participants = [
+        VNMParticipantInput(
+            connection_id=prefill.connection_id,
+            category=prefill.category,
+            sanctioned_load_kw=prefill.sanctioned_load_kw,
+            monthly_units=prefill.monthly_units,
+            procurement_share_percent=user_share,
+        ),
+        VNMParticipantInput(
+            connection_id="Other flats (assumed)",
+            category=prefill.category,
+            sanctioned_load_kw=prefill.sanctioned_load_kw,
+            monthly_units=prefill.monthly_units * (flats - 1),
+            procurement_share_percent=other_share,
+        ),
+    ]
+    return participants
 
 
 def build_vnm_participants(
