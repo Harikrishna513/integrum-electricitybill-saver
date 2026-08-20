@@ -50,42 +50,7 @@ def _vnm_integrum_report(
 ) -> SolarIntelligenceReport:
     current = comparison.current_bill
     vnm = comparison.vnm_bill
-
-    if comparison.needs_expected_credit:
-        return SolarIntelligenceReport(
-            option="vnm",
-            title="Individual VNM Comparison",
-            status="needs_input",
-            headline=f"Enter expected VNM solar credit · {location_line}",
-            location_line=location_line,
-            property_type=property_type,
-            sections=[
-                ReportSection(
-                    id="your_bill",
-                    title="Your Electricity Bill",
-                    metrics=[
-                        ReportMetric(
-                            label="Units consumed",
-                            value=f"{comparison.period_units_kwh:g} kWh",
-                            detail=comparison.billing_period or "From confirmed bill",
-                        ),
-                        ReportMetric(
-                            label="Sanctioned load",
-                            value=f"{comparison.sanctioned_load_kw:g} kW",
-                            detail="From your confirmed bill — not altered",
-                        ),
-                        ReportMetric(
-                            label="Current BESCOM bill",
-                            value=f"Rs {_fmt_inr(current.total)}",
-                            detail="Confirmed bill total",
-                        ),
-                    ],
-                ),
-            ],
-            disclaimer=comparison.disclaimer,
-            actions=["Enter expected VNM solar credit"],
-            raw={"vnm_comparison": comparison.model_dump(mode="json")},
-        )
+    method = comparison.methodology
 
     diff_label = (
         "Estimated monthly saving"
@@ -97,105 +62,84 @@ def _vnm_integrum_report(
         if comparison.is_vnm_cheaper
         else f"Rs {_fmt_inr(comparison.monthly_increase_inr)}/mo"
     )
-    diff_detail = (
-        f"Rs {_fmt_inr(comparison.annual_saving_inr)}/yr"
-        if comparison.is_vnm_cheaper
-        else f"Rs {_fmt_inr(comparison.annual_increase_inr)}/yr"
-    )
 
-    sections = [
-        ReportSection(
-            id="your_bill",
-            title="Your Electricity Bill",
-            metrics=[
-                ReportMetric(
-                    label=(
-                        "Units (billing period)"
-                        if comparison.is_multi_month_period
-                        else "Units consumed"
-                    ),
-                    value=(
-                        f"{comparison.period_units_kwh:g} kWh"
-                        + (
-                            f" (~{comparison.monthly_units:g} kWh/month avg)"
-                            if comparison.is_multi_month_period
-                            else ""
-                        )
-                    ),
-                    detail=comparison.billing_period or "Billing period from confirmed bill",
-                ),
-                ReportMetric(
-                    label="Sanctioned load",
-                    value=f"{comparison.sanctioned_load_kw:g} kW",
-                    detail="From your confirmed bill — not altered",
-                ),
-                ReportMetric(
-                    label="Current BESCOM bill",
-                    value=f"Rs {_fmt_inr(current.total)}",
-                    detail="Confirmed bill total",
-                ),
-            ],
+    metrics = [
+        ReportMetric(
+            label="Average monthly consumption",
+            value=f"{comparison.monthly_units:g} kWh",
+            detail=comparison.period_consumption_note or comparison.billing_period,
         ),
-        ReportSection(
-            id="vnm_estimate",
-            title="Your Estimated VNM Bill",
-            metrics=[
-                ReportMetric(
-                    label="Expected VNM solar credit",
-                    value=f"{comparison.solar_kwh_credited:g} kWh",
-                    detail="User-provided scenario — not from bill",
-                ),
-                ReportMetric(
-                    label="Remaining grid usage",
-                    value=f"{comparison.residual_grid_kwh:g} kWh",
-                    detail="BESCOM charges on this portion only",
-                ),
-                ReportMetric(
-                    label="Estimated total with VNM",
-                    value=f"Rs {_fmt_inr(vnm.total)}",
-                    detail=f"Via {comparison.provider}",
-                ),
-            ],
+        ReportMetric(
+            label="Illustrative plant size",
+            value=(
+                f"{comparison.illustrative_plant_kwp:g} kWp "
+                f"(~{comparison.monthly_kwh_per_kwp:g} units/kWp)"
+            ),
+            detail=comparison.scenario_label,
         ),
-        ReportSection(
-            id="comparison",
-            title="Monthly Difference",
-            metrics=[
-                ReportMetric(
-                    label="Current BESCOM bill",
-                    value=f"Rs {_fmt_inr(current.total)}",
-                    detail=None,
-                ),
-                ReportMetric(
-                    label="Estimated VNM bill",
-                    value=f"Rs {_fmt_inr(vnm.total)}",
-                    detail=None,
-                ),
-                ReportMetric(
-                    label=diff_label,
-                    value=diff_value,
-                    detail=diff_detail,
-                ),
-            ],
+        ReportMetric(
+            label="Illustrative VNM rate",
+            value=f"Rs {comparison.illustrative_rate_inr_per_kwh:g}/kWh + {comparison.gst_percent:g}% GST",
+            detail="Configurable commercial assumption — not an official tariff",
+        ),
+        ReportMetric(
+            label="Current BESCOM (monthly)",
+            value=f"Rs {_fmt_inr(current.total)}",
+            detail=None,
+        ),
+        ReportMetric(
+            label="VNM estimate (monthly)",
+            value=f"Rs {_fmt_inr(vnm.total)}",
+            detail=f"Via {comparison.provider}",
+        ),
+        ReportMetric(
+            label=diff_label,
+            value=diff_value,
+            detail=f"Rs {_fmt_inr(comparison.annual_saving_inr if comparison.is_vnm_cheaper else comparison.annual_increase_inr)}/yr (seasonal model)",
         ),
     ]
+    if comparison.has_gruha_jyothi and comparison.gruha_jyothi_note:
+        metrics.insert(
+            0,
+            ReportMetric(
+                label="Gruha Jyothi",
+                value="Limited additional savings likely",
+                detail=comparison.gruha_jyothi_note,
+            ),
+        )
+
+    steps = method.steps if method else []
+    if steps:
+        metrics.append(
+            ReportMetric(
+                label="How we estimated",
+                value=f"{len(steps)} steps",
+                detail=" · ".join(steps),
+            )
+        )
 
     headline = (
-        f"Estimated VNM saving for {location_line} · {property_type}"
+        f"Illustrative VNM saving · {location_line}"
         if comparison.is_vnm_cheaper
-        else f"VNM may cost more for {location_line} · {property_type}"
+        else f"Limited VNM benefit · {location_line}"
     )
 
     return SolarIntelligenceReport(
         option="vnm",
-        title="Individual VNM Comparison",
+        title="How we estimated your savings",
         status="ready",
         headline=headline,
         location_line=location_line,
         property_type=property_type,
-        sections=sections,
+        sections=[
+            ReportSection(
+                id="methodology",
+                title="How we estimated your savings",
+                metrics=metrics,
+            )
+        ],
         disclaimer=comparison.disclaimer,
-        actions=["Connect with Integrum Energy", "Download comparison"],
+        actions=[comparison.cta_primary, comparison.cta_secondary],
         raw={"vnm_comparison": comparison.model_dump(mode="json")},
     )
 

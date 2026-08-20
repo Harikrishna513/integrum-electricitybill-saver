@@ -24,6 +24,7 @@ class IntegrumVNMRule(BaseModel):
     rule_version: str
     provider_name: str
     provider_website: str | None = None
+    provider_contact_url: str | None = None
     effective_from: date
     effective_to: date | None = None
     verification_status: str
@@ -32,6 +33,7 @@ class IntegrumVNMRule(BaseModel):
     subscription: dict[str, Any] = Field(default_factory=dict)
     one_time: dict[str, Any] = Field(default_factory=dict)
     individual_scenario: dict[str, Any] = Field(default_factory=dict)
+    seasonal_model: dict[str, Any] = Field(default_factory=dict)
     apartment_assumptions: dict[str, Any] = Field(default_factory=dict)
     generation: dict[str, Any] = Field(default_factory=dict)
     user_messages: dict[str, str] = Field(default_factory=dict)

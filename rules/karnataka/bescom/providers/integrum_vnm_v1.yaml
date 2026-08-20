@@ -1,23 +1,19 @@
-# Integrum Energy — VNM service assumptions for apartment consumers.
+# Integrum Energy — VNM service assumptions for individual residential comparison.
 #
-# Integrum does not publish a flat residential VNM ₹/kWh tariff on their website.
-# subscription_inr_per_kwh is a MARKET ASSUMPTION derived from:
-#   - Integrum marketing: delivered RE power ~₹3–7/kWh vs grid (industrial clients)
-#   - KERC FY 2025–26 domestic DSPV benchmark ₹3.86/kWh (export floor reference)
-#   - Bangalore community-solar Opex quotes commonly ₹4.25–5.25/kWh credit delivered
-# Reconcile with Integrum before production consumer quotes.
+# Rates below are COMMERCIAL / ILLUSTRATIVE assumptions until a written provider quote exists.
+# Never present them as an official Integrum tariff without a current commercial quote.
 
 rule_version: INTEGRUM_VNM_V1_BOOTSTRAP
 provider_name: Integrum Energy
 provider_website: https://integrumenergy.in/
+provider_contact_url: https://integrumenergy.in/contact/
 effective_from: "2025-07-01"
 effective_to: null
 verification_status: REQUIRES_VERIFICATION
 source: Integrum public site + KERC DSPV order 09.07.2025 + market Opex band
 source_notes: >
-  Integrum is positioned as a hybrid RE platform for industrial/commercial clients.
-  Residential apartment VNM is modeled here as an Opex subscription per solar kWh
-  credited to the flat — lower than BESCOM retail but above KERC export tariff.
+  Integrum is positioned as a hybrid RE platform. Residential VNM Opex is modelled
+  here as an illustrative subscription per solar kWh for sales comparison only.
 
 subscription:
   model: opex_per_solar_kwh
@@ -25,31 +21,58 @@ subscription:
   market_low_inr_per_kwh: 2.5
   market_high_inr_per_kwh: 4.75
   gst_percent: 18.0
-  description: Monthly Integrum VNM solar credit subscription (Opex, no upfront plant cost)
+  description: Monthly VNM solar energy subscription (Opex, illustrative)
 
 one_time:
-  # KERC FY 2025–26 domestic DSPV capital cost benchmark (Times of India / KERC order gist)
   community_plant_capex_inr_per_kwp: 40000
-  # BESCOM smart meter / processing — market band ₹3,000–6,000 (Solar Karnataka 2026 guide)
   bescom_meter_fee_inr: 4500
   integrum_onboarding_inr_per_flat: 500
   gst_percent: 18.0
-  description: One-time society setup (plant + metering + onboarding), split per flat
+  description: Reserved for society calculator — unused in individual comparison
 
 individual_scenario:
-  # Integrum solar service rate for comparison (verify with Integrum quote).
+  # Pre-GST illustrative commercial assumption (config — not an official Integrum tariff).
   integrum_inr_per_kwh: 3.0
+  # Sales explorer: 1 kWp ≈ 120 kWh/month (illustrative yield, not a generation guarantee).
+  illustrative_monthly_kwh_per_kwp: 120
+  min_plant_kwp: 0.5
+  max_plant_kwp: 10.0
+  plant_step_kwp: 0.5
+  # Default plant sized to cover ~100% of monthly consumption (rounded up to step).
+  default_full_offset: true
+  label: Illustrative plant size — estimated monthly solar units
   description: >
-    VNM solar credit must be entered by the user from their provider/society.
-    Integrum rate is used only for the VNM service charge estimate.
+    Consumers explore plant size (kWp). Estimated solar units = kWp × monthly
+    kWh/kWp, capped at their consumption. Not an actual VNM allocation.
+
+# Illustrative seasonal factors relative to the uploaded bill's monthly baseline.
+# Not Bangalore-specific facts — planning assumptions only.
+seasonal_model:
+  label: Illustrative seasonal consumption factors
+  # month number (1=Jan … 12=Dec) → factor vs baseline month consumption
+  factors_by_month:
+    1: 0.90   # Winter
+    2: 0.90
+    3: 1.10   # Pre-monsoon
+    4: 1.15   # Summer
+    5: 1.15
+    6: 0.95   # Monsoon
+    7: 0.95
+    8: 0.95
+    9: 1.00   # Post-monsoon
+    10: 1.00
+    11: 0.90  # Winter
+    12: 0.90
+  notes: >
+    Factors are normalised to the uploaded bill month (= 1.0). Other months are
+    relative to that month. Chart month 1 matches the comparison table totals.
+    Not historical meter data.
 
 # Reserved for a future society/community VNM calculator — not used in individual comparison.
 apartment_assumptions:
   typical_flats: 20
   description: >
-    We assume a typical 20-flat apartment society. Your solar share is estimated
-    from your consumption vs assumed equal usage across flats. Integrum handles
-    VNM registration with the society — you do not need neighbour RR numbers.
+    Reserved for a separate Society/Community VNM Calculator.
   share_model: consumption_proportional_equal_flats
   min_plant_kwp: 5.0
   target_offset_fraction: 0.85
@@ -59,11 +82,18 @@ generation:
 
 user_messages:
   individual_banner: >
-    This comparison uses only your confirmed bill for BESCOM charges. Expected VNM
-    solar credit must come from your VNM provider or society — it is not calculated
-    from consumption, sanctioned load, or apartment assumptions.
+    This estimate uses only your confirmed bill. Solar coverage is an illustrative
+    sales scenario — not your actual VNM allocation from a provider.
   credit_input_prompt: >
-    To estimate your VNM bill, enter the expected solar credit provided by your
-    VNM provider or society for this billing period.
+    Advanced: enter an expected solar credit (kWh) from a provider quote for this period.
+  gruha_jyothi_note: >
+    Your current bill already benefits from Gruha Jyothi. VNM may provide limited
+    additional savings — review the comparison carefully.
+  disclaimer_short: >
+    Estimate only. Actual VNM savings depend on the provider's commercial rate,
+    project generation, customer allocation and applicable BESCOM/KERC charges.
   no_subsidy: >
     PM Surya Ghar subsidy is not included in this VNM Opex model.
+  cta_primary: Get your VNM proposal
+  cta_secondary: Talk to Integrum
+  cta_url: https://integrumenergy.in/contact/

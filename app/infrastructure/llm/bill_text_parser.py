@@ -12,6 +12,7 @@ from app.infrastructure.llm.extraction_prompts import (
     EXTRACTION_USER_PROMPT,
 )
 from app.domain.models.extracted_field import ExtractedField
+from app.domain.services.bill_identity_guards import scrub_misplaced_identity_fields
 from app.infrastructure.llm.gemini_client import build_chat_model
 
 
@@ -58,6 +59,8 @@ def parse_bill_from_ocr_text(
         extraction = ElectricityBillExtraction.model_validate(result)
     else:
         raise BillExtractionError(f"Unexpected parser output: {type(result).__name__}")
+
+    extraction = scrub_misplaced_identity_fields(extraction, ocr_text=ocr_text)
 
     note = f"Fields parsed from {source_label} text via {settings.gemini_model}."
     if extraction.extraction_notes.value:

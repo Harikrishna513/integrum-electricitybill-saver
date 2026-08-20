@@ -26,11 +26,17 @@ class ElectricityBillExtraction(BaseModel):
     consumer_name: ExtractedField = Field(default_factory=ExtractedField)
     account_id: ExtractedField = Field(
         default_factory=ExtractedField,
-        description="Account / Consumer ID / Account No if present.",
+        description=(
+            "Account Id / Account No / Consumer ID if labeled on the bill. "
+            "Stable across months. NEVER use Bill Number / ಬಿಲ್ ಸಂಖ್ಯೆ here."
+        ),
     )
     rr_number: ExtractedField = Field(
         default_factory=ExtractedField,
-        description="RR Number / Revenue Register number if present.",
+        description=(
+            "RR Number / Revenue Register if present. "
+            "Not the same as Bill Number or Account Id."
+        ),
     )
     address: ExtractedField = Field(default_factory=ExtractedField)
 

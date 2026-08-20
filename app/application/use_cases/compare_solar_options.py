@@ -99,6 +99,8 @@ class CompareSolarOptionsUseCase:
             vnm_comparison = build_vnm_comparison(
                 stored,
                 prefill,
+                illustrative_plant_kwp=request.illustrative_plant_kwp,
+                illustrative_coverage_fraction=request.illustrative_coverage_fraction,
                 expected_vnm_solar_credit_kwh=request.expected_vnm_solar_credit_kwh,
             )
 

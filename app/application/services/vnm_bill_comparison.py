@@ -1,29 +1,41 @@
-"""Compare uploaded BESCOM bill vs Integrum VNM — individual consumer only."""
+"""VNM bill comparison — individual consumer sales estimate (no society assumptions)."""
 
 from __future__ import annotations
 
-from app.domain.engines.tariff import TariffEngine
+import math
+
 from app.domain.models.solar_options import BillSolarPrefill
 from app.domain.models.validated_bill import BillValidationResult, CanonicalElectricityBill, ParseStatus
 from app.domain.models.vnm_comparison import (
     BillLineItem,
     BillScenario,
+    MonthlyBillEstimate,
     VNMComparisonView,
+    VNMMethodology,
 )
 from app.infrastructure.persistence.repository import StoredBillAnalysis
 from app.infrastructure.rules.integrum_vnm_rules import IntegrumVNMRule, get_default_integrum_vnm_rule
 
-# BESCOM line codes scaled by remaining grid kWh; fixed charge stays as on bill.
 _VARIABLE_CHARGE_FIELDS: tuple[tuple[str, str, str], ...] = (
     ("energy_charge", "ENERGY", "Energy charges"),
     ("fppca", "FPPCA", "FPPCA"),
     ("other_charges", "OTHER", "P & G / other charges"),
 )
 
-
-_CREDIT_INPUT_PROMPT = (
-    "To estimate your VNM bill, enter the expected solar credit provided by your "
-    "VNM provider or society for this billing period."
+_MONTH_NAMES = (
+    "",
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
 )
 
 
@@ -31,205 +43,345 @@ def build_vnm_comparison(
     stored: StoredBillAnalysis,
     prefill: BillSolarPrefill,
     *,
+    illustrative_plant_kwp: float | None = None,
+    illustrative_coverage_fraction: float | None = None,
     expected_vnm_solar_credit_kwh: float | None = None,
     provider_rule: IntegrumVNMRule | None = None,
-    tariff_engine: TariffEngine | None = None,
 ) -> VNMComparisonView:
+    """
+    Sales-focused VNM estimate from a confirmed bill.
+
+    - Monthly baseline = period units ÷ billing months (multi-month BMD safe).
+    - Default = plant sized for ~100% offset (1 kWp ≈ N kWh/month from config).
+    - Optional advanced quote kWh overrides the plant explorer.
+    """
     rule = provider_rule or get_default_integrum_vnm_rule()
-    tariff = tariff_engine or TariffEngine()
+
     validation = BillValidationResult.model_validate(stored.validation)
     bill = validation.bill
 
-    period_units = prefill.period_units_kwh
-    monthly_equiv = prefill.monthly_units
-    period_months = prefill.billing_period_months
-    sanctioned_load_kw = prefill.sanctioned_load_kw
-    credit_prompt = rule.user_messages.get("credit_input_prompt", _CREDIT_INPUT_PROMPT)
+    period_units = float(prefill.period_units_kwh)
+    period_months = max(1.0, float(prefill.billing_period_months or 1.0))
+    monthly_baseline = float(prefill.monthly_units)
+    sanctioned = float(prefill.sanctioned_load_kw)
 
-    current = _current_bill_scenario(bill, prefill, tariff)
+    scenario = rule.individual_scenario
+    kwh_per_kwp = float(scenario.get("illustrative_monthly_kwh_per_kwp", 120))
+    min_kwp = float(scenario.get("min_plant_kwp", 0.5))
+    max_kwp = float(scenario.get("max_plant_kwp", 10.0))
+    step_kwp = float(scenario.get("plant_step_kwp", 0.5))
+    default_kwp = _default_plant_kwp(
+        monthly_baseline, kwh_per_kwp, min_kwp, max_kwp, step_kwp
+    )
 
-    if expected_vnm_solar_credit_kwh is None:
-        return _comparison_without_credit(
-            rule=rule,
-            prefill=prefill,
-            current=current,
-            period_units=period_units,
-            monthly_equiv=monthly_equiv,
-            period_months=period_months,
-            sanctioned_load_kw=sanctioned_load_kw,
-            credit_prompt=credit_prompt,
+    using_quote = expected_vnm_solar_credit_kwh is not None
+    plant_kwp = default_kwp
+    estimated_generation = 0.0
+
+    if using_quote:
+        period_credit = min(period_units, max(0.0, float(expected_vnm_solar_credit_kwh)))
+        solar_monthly = round(period_credit / period_months, 2)
+        estimated_generation = solar_monthly
+        plant_kwp = (
+            round(solar_monthly / kwh_per_kwp, 2) if kwh_per_kwp > 0 else default_kwp
         )
+        scenario_label = (
+            f"Advanced — provider quote ≈ {solar_monthly:g} kWh/month "
+            f"(from {period_credit:g} kWh for the billing period)"
+        )
+        coverage_source = "provider_quote"
+    elif illustrative_plant_kwp is not None:
+        plant_kwp = _clamp_plant(float(illustrative_plant_kwp), min_kwp, max_kwp, step_kwp)
+        estimated_generation = round(plant_kwp * kwh_per_kwp, 2)
+        solar_monthly = round(min(monthly_baseline, estimated_generation), 2)
+        scenario_label = (
+            f"Illustrative plant {plant_kwp:g} kWp → ~{estimated_generation:g} units/month "
+            f"({kwh_per_kwp:g} units per kWp)"
+        )
+        coverage_source = "illustrative_plant"
+    elif illustrative_coverage_fraction is not None:
+        coverage = max(0.0, min(1.0, float(illustrative_coverage_fraction)))
+        solar_monthly = round(monthly_baseline * coverage, 2)
+        estimated_generation = solar_monthly
+        plant_kwp = (
+            _clamp_plant(solar_monthly / kwh_per_kwp, min_kwp, max_kwp, step_kwp)
+            if kwh_per_kwp > 0
+            else default_kwp
+        )
+        scenario_label = (
+            f"Illustrative plant {plant_kwp:g} kWp → {solar_monthly:g} kWh/month "
+            f"(legacy coverage {coverage * 100:.0f}%)"
+        )
+        coverage_source = "illustrative_plant"
+    else:
+        plant_kwp = default_kwp
+        estimated_generation = round(plant_kwp * kwh_per_kwp, 2)
+        solar_monthly = round(min(monthly_baseline, estimated_generation), 2)
+        scenario_label = (
+            f"Illustrative plant {plant_kwp:g} kWp → ~{estimated_generation:g} units/month "
+            f"(sized for ~100% of your {monthly_baseline:g} kWh consumption)"
+        )
+        coverage_source = "illustrative_plant"
 
-    solar_credit = round(min(period_units, max(0.0, expected_vnm_solar_credit_kwh)), 2)
-    residual_units = round(max(0.0, period_units - solar_credit), 2)
-    scenario_label = "Expected / scenario VNM solar credit (from provider or society)"
+    coverage = (
+        round(solar_monthly / monthly_baseline, 4) if monthly_baseline > 0 else 0.0
+    )
+    residual_monthly = round(max(0.0, monthly_baseline - solar_monthly), 2)
+    surplus_kwh = round(max(0.0, estimated_generation - monthly_baseline), 2)
+    surplus_note = None
+    if surplus_kwh > 0:
+        surplus_note = (
+            f"Extra solar this month: {surplus_kwh:g} kWh. "
+            "Surplus units bank month-to-month; financial settlement is yearly "
+            "(as per the provider proposal — not credited as cash on this bill)."
+        )
+    rate = _illustrative_rate(rule)
+    gst_pct = float(rule.subscription.get("gst_percent", 18.0))
 
-    sub_rate = _integrum_scenario_rate(rule)
-    vnm = _vnm_bill_scenario(
+    current = _current_bill_scenario(bill, prefill, period_units, monthly_baseline)
+    period_bill_total = current.total
+    monthly_current = round(period_bill_total / period_months, 2)
+    if period_months > 1.01:
+        current = _monthlyize_scenario(current, period_months, monthly_baseline)
+
+    vnm_month = _vnm_month_estimate(
         bill=bill,
-        prefill=prefill,
-        tariff=tariff,
+        monthly_baseline=monthly_baseline,
+        residual_monthly=residual_monthly,
+        solar_monthly=solar_monthly,
+        estimated_generation=estimated_generation,
+        surplus_kwh=surplus_kwh,
+        rate=rate,
+        gst_pct=gst_pct,
+        provider_name=rule.provider_name,
+        current_total=period_bill_total,
+    )
+
+    monthly_diff = round(monthly_current - vnm_month["total"], 2)
+    is_cheaper = monthly_diff > 0
+    monthly_saving = round(max(0.0, monthly_diff), 2)
+    monthly_increase = round(max(0.0, -monthly_diff), 2)
+
+    start_month = _start_month(prefill)
+    chart = _seasonal_chart(
         rule=rule,
-        residual_units=residual_units,
-        solar_credit=solar_credit,
-        period_units=period_units,
-        monthly_equiv=monthly_equiv,
-        sanctioned_load_kw=sanctioned_load_kw,
-        integrum_rate=sub_rate,
+        bill=bill,
+        monthly_baseline=monthly_baseline,
+        plant_kwp=plant_kwp,
+        kwh_per_kwp=kwh_per_kwp,
+        solar_monthly_fixed=solar_monthly if using_quote else None,
+        rate=rate,
+        gst_pct=gst_pct,
+        provider_name=rule.provider_name,
+        current_total=period_bill_total,
+        start_month=start_month,
+        anchor_bescom_inr=monthly_current,
+        anchor_vnm_inr=vnm_month["total"],
+    )
+    annual_bescom = round(sum(m.estimated_bescom_bill_inr for m in chart), 2)
+    annual_vnm = round(sum(m.estimated_vnm_bill_inr for m in chart), 2)
+    annual_diff = round(annual_bescom - annual_vnm, 2)
+    annual_saving = round(max(0.0, annual_diff), 2)
+    annual_increase = round(max(0.0, -annual_diff), 2)
+
+    subsidy = _subsidy_amount(bill)
+    has_gj = subsidy > 0 or _looks_gruha_jyothi(bill, monthly_current, monthly_baseline)
+    gj_note = rule.user_messages.get("gruha_jyothi_note") if has_gj else None
+
+    residual_bundle = vnm_month["residual_bescom"]
+    vnm_service = vnm_month["vnm_service_total"]
+    vnm_lines = vnm_month["lines"]
+    detail_lines = vnm_month["detail_lines"]
+
+    vnm_scenario = BillScenario(
+        title="With VNM Solar — Estimated",
+        subtitle=(
+            f"{monthly_baseline:g} kWh/mo baseline · {plant_kwp:g} kWp · "
+            f"~{estimated_generation:g} kWh gen · {solar_monthly:g} kWh offset"
+            + (f" · {surplus_kwh:g} kWh surplus" if surplus_kwh > 0 else "")
+            + f" · {residual_monthly:g} kWh remaining grid · {sanctioned:g} kW load"
+        ),
+        lines=vnm_lines,
+        total=vnm_month["total"],
+        units_kwh=monthly_baseline,
+        notes=[
+            scenario_label + ".",
+            f"Rule of thumb: 1 kWp ≈ {kwh_per_kwp:g} units/month (illustrative).",
+            *( [surplus_note] if surplus_note else [] ),
+            "Illustrative commercial rate — not an official provider tariff.",
+            "Fixed / non-energy BESCOM charges kept from your confirmed bill where applicable.",
+        ],
     )
 
-    period_difference = round(current.total - vnm.total, 2)
-    is_cheaper = period_difference > 0
-    period_saving = round(max(0.0, period_difference), 2)
-    period_increase = round(max(0.0, -period_difference), 2)
-    monthly_factor = 1.0 / period_months if period_months > 0 else 1.0
-    monthly_difference = round(period_difference * monthly_factor, 2)
-    monthly_saving = round(period_saving * monthly_factor, 2)
-    monthly_increase = round(period_increase * monthly_factor, 2)
-    annual_factor = 12.0 / period_months if period_months > 0 else 12.0
-    annual_difference = round(period_difference * annual_factor, 2)
-    annual_saving = round(period_saving * annual_factor, 2)
-    annual_increase = round(period_increase * annual_factor, 2)
+    methodology = VNMMethodology(
+        monthly_baseline_kwh=monthly_baseline,
+        coverage_fraction=round(coverage, 4),
+        coverage_label=scenario_label,
+        coverage_source=coverage_source,
+        illustrative_plant_kwp=plant_kwp,
+        monthly_kwh_per_kwp=kwh_per_kwp,
+        illustrative_rate_inr_per_kwh=rate,
+        gst_percent=gst_pct,
+        seasonal_model_label=str(
+            (rule.seasonal_model or {}).get(
+                "label", "Illustrative seasonal consumption factors"
+            )
+        ),
+        steps=[
+            f"Monthly baseline from confirmed bill: {monthly_baseline:g} kWh/month"
+            + (
+                f" ({period_units:g} kWh ÷ {period_months:g} months)"
+                if period_months > 1.01
+                else ""
+            ),
+            f"Illustrative plant {plant_kwp:g} kWp × {kwh_per_kwp:g} units/kWp "
+            f"→ {estimated_generation:g} kWh estimated generation",
+            f"Offset applied to your bill: {solar_monthly:g} kWh"
+            + (
+                f"; surplus {surplus_kwh:g} kWh not charged in this month's VNM estimate"
+                if surplus_kwh > 0
+                else ""
+            ),
+            f"Illustrative VNM energy rate ₹{rate}/kWh (pre-GST) + {gst_pct:g}% GST "
+            f"(charged on offset units only in this estimate)",
+            "Remaining BESCOM charges use your bill's fixed charge and scale variable "
+            "lines for residual grid kWh",
+            "Annual chart uses illustrative seasonal factors on the monthly baseline "
+            "(not historical meter data)",
+        ],
+    )
 
-    gst = float(rule.subscription.get("gst_percent", 18.0))
-    market_low = rule.subscription.get("market_low_inr_per_kwh")
-    market_high = rule.subscription.get("market_high_inr_per_kwh")
-    rate_band = (
-        f"₹{market_low}–{market_high}/kWh"
-        if market_low and market_high
-        else f"₹{sub_rate}/kWh"
-    )
-    period_label = (
-        f"{period_units:g} kWh for this billing period"
-        if prefill.is_multi_month_period
-        else f"{period_units:g} kWh"
-    )
     assumptions = [
         rule.user_messages.get("individual_banner", ""),
-        f"Expected VNM solar credit: {solar_credit:g} kWh (user-provided scenario).",
-        "BESCOM side: fixed charge stays the same as your bill; energy, FPPCA and P&G scale "
-        f"only for remaining grid kWh ({residual_units:g} of {period_label}).",
-        f"Integrum VNM service: illustrative ₹{sub_rate}/kWh on expected solar credit "
-        f"+ {gst:g}% GST (market band {rate_band} — verify with Integrum).",
-        "Gruha Jyothi / bill subsidies on your current bill are not included in the VNM estimate.",
+        scenario_label + ".",
+        f"1 kWp ≈ {kwh_per_kwp:g} units/month (illustrative planning yield).",
+        f"Illustrative commercial rate: ₹{rate}/kWh + {gst_pct:g}% GST "
+        f"(config — not an official {rule.provider_name} tariff).",
+        f"Average monthly consumption: {monthly_baseline:g} kWh.",
         rule.user_messages.get("no_subsidy", ""),
-        f"Source: {rule.source}",
     ]
+    if surplus_note:
+        assumptions.insert(1, surplus_note)
     if prefill.period_consumption_note:
         assumptions.insert(1, prefill.period_consumption_note)
-    assumptions = [a for a in assumptions if a.strip()]
+    if gj_note:
+        assumptions.insert(1, gj_note)
+    assumptions = [a for a in assumptions if a and str(a).strip()]
+
+    disclaimer = rule.user_messages.get(
+        "disclaimer_short",
+        "Estimate only. Actual VNM savings depend on the provider's commercial rate, "
+        "project generation, customer allocation and applicable BESCOM/KERC charges.",
+    )
 
     return VNMComparisonView(
         provider=rule.provider_name,
         provider_website=rule.provider_website,
-        sanctioned_load_kw=sanctioned_load_kw,
+        sanctioned_load_kw=sanctioned,
         billing_period=prefill.billing_period,
         period_units_kwh=period_units,
-        monthly_units=monthly_equiv,
+        monthly_units=monthly_baseline,
         billing_period_months=period_months,
         is_multi_month_period=prefill.is_multi_month_period,
         period_consumption_note=prefill.period_consumption_note,
-        current_bill_total_inr=current.total,
-        expected_vnm_solar_credit_kwh=solar_credit,
+        current_bill_total_inr=monthly_current,
+        expected_vnm_solar_credit_kwh=(
+            round(solar_monthly * period_months, 2) if using_quote else None
+        ),
         needs_expected_credit=False,
-        credit_input_prompt=None,
+        credit_input_prompt=rule.user_messages.get("credit_input_prompt"),
         scenario_label=scenario_label,
-        solar_kwh_credited=solar_credit,
-        residual_grid_kwh=residual_units,
-        monthly_difference_inr=monthly_difference,
-        annual_difference_inr=annual_difference,
+        solar_kwh_credited=solar_monthly,
+        residual_grid_kwh=residual_monthly,
+        estimated_generation_kwh=estimated_generation,
+        surplus_kwh=surplus_kwh,
+        illustrative_coverage_fraction=round(coverage, 4),
+        coverage_source=coverage_source,
+        illustrative_plant_kwp=plant_kwp,
+        monthly_kwh_per_kwp=kwh_per_kwp,
+        plant_slider_min_kwp=min_kwp,
+        plant_slider_max_kwp=max_kwp,
+        plant_slider_step_kwp=step_kwp,
+        default_plant_kwp=default_kwp,
+        surplus_note=surplus_note,
+        illustrative_rate_inr_per_kwh=rate,
+        gst_percent=gst_pct,
+        vnm_energy_cost_inr=vnm_month["vnm_energy"],
+        vnm_gst_inr=vnm_month["vnm_gst"],
+        vnm_service_total_inr=vnm_service,
+        residual_bescom_charges_inr=residual_bundle,
+        has_gruha_jyothi=has_gj,
+        gruha_jyothi_note=gj_note,
+        period_difference_inr=monthly_diff,
+        monthly_difference_inr=monthly_diff,
+        annual_difference_inr=annual_diff,
         is_vnm_cheaper=is_cheaper,
-        period_difference_inr=period_difference,
-        period_saving_inr=period_saving,
-        period_increase_inr=period_increase,
+        period_saving_inr=monthly_saving,
+        period_increase_inr=monthly_increase,
         monthly_saving_inr=monthly_saving,
         monthly_increase_inr=monthly_increase,
         annual_saving_inr=annual_saving,
         annual_increase_inr=annual_increase,
         current_bill=current,
-        vnm_bill=vnm,
-        assumptions=assumptions,
-        disclaimer=(
-            f"Preliminary individual VNM comparison with {rule.provider_name} service assumptions. "
-            f"Expected solar credit is a user-provided scenario — not a guaranteed allocation. "
-            f"Not a BESCOM approval. Rule {rule.rule_version} — {rule.verification_status}."
+        vnm_bill=vnm_scenario,
+        calculation_detail_lines=detail_lines,
+        monthly_chart=chart,
+        methodology=methodology,
+        cta_primary=rule.user_messages.get("cta_primary", "Get your VNM proposal"),
+        cta_secondary=rule.user_messages.get("cta_secondary", "Talk to Integrum"),
+        cta_url=(
+            rule.user_messages.get("cta_url")
+            or getattr(rule, "provider_contact_url", None)
+            or "https://integrumenergy.in/contact/"
         ),
+        assumptions=assumptions,
+        disclaimer=disclaimer,
     )
 
 
-def _comparison_without_credit(
+def _default_plant_kwp(
+    monthly_baseline: float,
+    kwh_per_kwp: float,
+    min_kwp: float,
+    max_kwp: float,
+    step_kwp: float,
+) -> float:
+    """Size plant upward to cover ~100% of monthly consumption."""
+    if monthly_baseline <= 0 or kwh_per_kwp <= 0:
+        return min_kwp
+    raw = monthly_baseline / kwh_per_kwp
+    return _clamp_plant(raw, min_kwp, max_kwp, step_kwp, round_up=True)
+
+
+def _clamp_plant(
+    value: float,
+    min_kwp: float,
+    max_kwp: float,
+    step_kwp: float,
     *,
-    rule: IntegrumVNMRule,
-    prefill: BillSolarPrefill,
-    current: BillScenario,
-    period_units: float,
-    monthly_equiv: float,
-    period_months: float,
-    sanctioned_load_kw: float,
-    credit_prompt: str,
-) -> VNMComparisonView:
-    assumptions = [
-        rule.user_messages.get("individual_banner", ""),
-        credit_prompt,
-    ]
-    if prefill.period_consumption_note:
-        assumptions.append(prefill.period_consumption_note)
-    assumptions = [a for a in assumptions if a.strip()]
-
-    placeholder_vnm = BillScenario(
-        title="VNM Scenario",
-        subtitle="Enter expected VNM solar credit to estimate",
-        lines=[],
-        total=0,
-        units_kwh=period_units,
-        notes=[credit_prompt],
-    )
-
-    return VNMComparisonView(
-        provider=rule.provider_name,
-        provider_website=rule.provider_website,
-        sanctioned_load_kw=sanctioned_load_kw,
-        billing_period=prefill.billing_period,
-        period_units_kwh=period_units,
-        monthly_units=monthly_equiv,
-        billing_period_months=period_months,
-        is_multi_month_period=prefill.is_multi_month_period,
-        period_consumption_note=prefill.period_consumption_note,
-        current_bill_total_inr=current.total,
-        expected_vnm_solar_credit_kwh=None,
-        needs_expected_credit=True,
-        credit_input_prompt=credit_prompt,
-        scenario_label="",
-        solar_kwh_credited=0,
-        residual_grid_kwh=0,
-        monthly_difference_inr=0,
-        annual_difference_inr=0,
-        is_vnm_cheaper=False,
-        period_difference_inr=0,
-        period_saving_inr=0,
-        period_increase_inr=0,
-        monthly_saving_inr=0,
-        monthly_increase_inr=0,
-        annual_saving_inr=0,
-        annual_increase_inr=0,
-        current_bill=current,
-        vnm_bill=placeholder_vnm,
-        assumptions=assumptions,
-        disclaimer=(
-            f"Enter expected VNM solar credit from your provider to compare with "
-            f"{rule.provider_name}. BESCOM bill data is from your confirmed upload."
-        ),
-    )
+    round_up: bool = False,
+) -> float:
+    step = step_kwp if step_kwp > 0 else 0.5
+    if round_up:
+        steps = math.ceil(value / step - 1e-9)
+    else:
+        steps = round(value / step)
+    snapped = max(min_kwp, min(max_kwp, steps * step))
+    # Avoid float noise (1.0000000002)
+    return round(snapped, 2)
 
 
-def _integrum_scenario_rate(rule: IntegrumVNMRule) -> float:
+def _illustrative_rate(rule: IntegrumVNMRule) -> float:
     scenario = rule.individual_scenario
     if scenario.get("integrum_inr_per_kwh") is not None:
         return float(scenario["integrum_inr_per_kwh"])
-    low = rule.subscription.get("market_low_inr_per_kwh")
-    if low is not None:
-        return float(low)
     return float(rule.subscription.get("inr_per_kwh", 3.0))
+
+
+def _start_month(prefill: BillSolarPrefill) -> int:
+    if prefill.as_of:
+        return int(prefill.as_of.month)
+    return 1
 
 
 def _field_amount(bill: CanonicalElectricityBill, attr: str) -> float | None:
@@ -239,79 +391,6 @@ def _field_amount(bill: CanonicalElectricityBill, attr: str) -> float | None:
     return None
 
 
-def _units_subtitle(prefill: BillSolarPrefill, period_units: float) -> str:
-    period = prefill.billing_period or "—"
-    base = (
-        f"{period_units:g} kWh for billing period · "
-        f"{prefill.sanctioned_load_kw:g} kW sanctioned load · "
-        f"Period: {period}"
-    )
-    if prefill.is_multi_month_period:
-        return (
-            f"{base} (~{prefill.monthly_units:g} kWh/month average over "
-            f"~{prefill.billing_period_months:g} months)"
-        )
-    return base
-
-
-def _current_bill_scenario(
-    bill: CanonicalElectricityBill,
-    prefill: BillSolarPrefill,
-    tariff: TariffEngine,
-) -> BillScenario:
-    lines: list[BillLineItem] = []
-    notes: list[str] = []
-    period_units = prefill.period_units_kwh
-
-    extracted = _extracted_lines(bill, period_units)
-    if extracted:
-        lines = extracted
-        notes.append("Charge breakdown from your confirmed uploaded bill (amounts you paid).")
-        components_total = sum(l.amount for l in lines)
-        subsidy_amt = _subsidy_amount(bill)
-        printed = _printed_total(bill, components_total, subsidy_amt)
-        if subsidy_amt and abs(components_total - printed) > 2.0:
-            notes.append(
-                f"Net payable on your bill: ₹{printed:,.2f}. "
-                f"Gruha Jyothi subsidy (−₹{subsidy_amt:,.2f}) is shown separately. "
-                "If line items do not add up, verify Total Amount matches the printed "
-                "Net Payable / Current Demand on the bill."
-            )
-        total = printed
-    else:
-        calc = tariff.calculate(
-            discom=prefill.discom,
-            category=prefill.category,
-            as_of=prefill.as_of,
-            units=period_units,
-            sanctioned_load_kw=prefill.sanctioned_load_kw,
-            tariff_code=prefill.tariff_code,
-        )
-        for line in calc.lines:
-            lines.append(
-                BillLineItem(
-                    code=line.code,
-                    label=line.description,
-                    amount=line.amount,
-                    detail=line.detail,
-                )
-            )
-        total = float(calc.estimated_total or 0)
-        notes.append("Estimated from BESCOM tariff rules (bill line items not fully extracted).")
-
-    if prefill.period_consumption_note:
-        notes.append(prefill.period_consumption_note)
-
-    return BillScenario(
-        title="My Current BESCOM Bill",
-        subtitle=_units_subtitle(prefill, period_units),
-        lines=lines,
-        total=round(total, 2),
-        units_kwh=period_units,
-        notes=notes,
-    )
-
-
 def _subsidy_amount(bill: CanonicalElectricityBill) -> float:
     subsidy = bill.subsidy
     if subsidy.parse_status == ParseStatus.OK and subsidy.value:
@@ -319,226 +398,524 @@ def _subsidy_amount(bill: CanonicalElectricityBill) -> float:
     return 0.0
 
 
-def _printed_total(
-    bill: CanonicalElectricityBill,
-    components_total: float,
-    subsidy_amt: float,
-) -> float:
-    if bill.total_amount.value is not None:
-        return float(bill.total_amount.value)
-    return components_total - subsidy_amt
+def _looks_gruha_jyothi(
+    bill: CanonicalElectricityBill, total: float, units: float
+) -> bool:
+    if _subsidy_amount(bill) > 0:
+        return True
+    # Heavily subsidised domestic bills often land near zero payable.
+    return units > 0 and total >= 0 and total < 150
 
 
-def _extracted_lines(bill: CanonicalElectricityBill, units: float) -> list[BillLineItem]:
-    mapping = [
-        ("ENERGY", "Energy charges", bill.energy_charge, lambda v: f"{units:g} kWh for period"),
-        ("FIXED", "Fixed charges", bill.fixed_charge, None),
-        ("FPPCA", "FPPCA", bill.fppca, lambda v: f"{units:g} kWh × ₹{v/units:.2f}/kWh" if units > 0 and v else None),
-        ("OTHER", "P & G / other charges", bill.other_charges, None),
-        ("TAX", "Electricity tax", bill.electricity_tax, None),
-        ("ARREARS", "Arrears", bill.arrears, None),
-        ("LATE", "Late payment", bill.late_payment_charge, None),
-    ]
+def _qty_rate_detail(units: float, amount: float) -> str | None:
+    if units <= 0:
+        return None
+    return f"{units:g} × ₹{amount / units:.2f}/kWh"
+
+
+def _monthlyize_scenario(
+    scenario: BillScenario, period_months: float, monthly_baseline: float
+) -> BillScenario:
+    """Convert a multi-month period bill into monthly-average display amounts."""
+    months = max(1.0, period_months)
     lines: list[BillLineItem] = []
-    for code, label, field, detail_fn in mapping:
-        if field.parse_status == ParseStatus.OK and field.value is not None:
-            val = float(field.value)
-            if code in ("ARREARS", "LATE") and val == 0:
-                continue
-            detail = detail_fn(val) if detail_fn else None
-            lines.append(BillLineItem(code=code, label=label, amount=val, detail=detail))
-
-    subsidy = bill.subsidy
-    if subsidy.parse_status == ParseStatus.OK and subsidy.value:
-        val = abs(float(subsidy.value))
-        if val > 0:
+    for line in scenario.lines:
+        if line.code == "CONSUMPTION":
             lines.append(
                 BillLineItem(
-                    code="SUBSIDY",
-                    label="Gruha Jyothi / subsidy",
-                    amount=-val,
-                    detail="Reduction on your printed bill",
+                    code=line.code,
+                    label=line.label,
+                    amount=0,
+                    detail=f"Average monthly consumption: {monthly_baseline:g} kWh",
                 )
             )
-    return lines
-
-
-def _vnm_bescom_from_bill(
-    bill: CanonicalElectricityBill,
-    *,
-    period_units: float,
-    residual_units: float,
-) -> tuple[list[BillLineItem], float] | None:
-    """Scale variable BESCOM charges from the bill; keep fixed charge unchanged."""
-    energy = _field_amount(bill, "energy_charge")
-    fixed = _field_amount(bill, "fixed_charge")
-    if energy is None or fixed is None or period_units <= 0:
-        return None
-
-    ratio = residual_units / period_units
-    lines: list[BillLineItem] = []
-
-    scaled_energy = round(energy * ratio, 2)
-    lines.append(
-        BillLineItem(
-            code="BESCOM_ENERGY",
-            label="Energy charges (grid only)",
-            amount=scaled_energy,
-            detail=f"{residual_units:g} kWh — scaled from your bill",
-        )
-    )
-    lines.append(
-        BillLineItem(
-            code="BESCOM_FIXED",
-            label="Fixed charges",
-            amount=round(fixed, 2),
-            detail="Same as your bill — connection fixed charge unchanged",
-        )
-    )
-
-    variable_pre_tax = energy
-    scaled_variable = scaled_energy
-    for attr, code, label in _VARIABLE_CHARGE_FIELDS[1:]:
-        amount = _field_amount(bill, attr)
-        if amount is None or amount == 0:
             continue
-        scaled = round(amount * ratio, 2)
-        variable_pre_tax += amount
-        scaled_variable += scaled
-        unit_rate = amount / period_units
         lines.append(
             BillLineItem(
-                code=f"BESCOM_{code}",
-                label=label,
-                amount=scaled,
-                detail=f"{residual_units:g} kWh × ₹{unit_rate:.2f}/kWh — from your bill",
+                code=line.code,
+                label=line.label,
+                amount=round(line.amount / months, 2),
+                detail=(
+                    f"{line.detail} · monthly avg" if line.detail else "Monthly average"
+                ),
             )
         )
-
-    tax = _field_amount(bill, "electricity_tax")
-    pre_tax_total = variable_pre_tax + fixed
-    if tax and pre_tax_total > 0:
-        scaled_pre_tax = scaled_variable + fixed
-        scaled_tax = round(tax * (scaled_pre_tax / pre_tax_total), 2)
-        lines.append(
-            BillLineItem(
-                code="BESCOM_TAX",
-                label="Electricity tax",
-                amount=scaled_tax,
-                detail="Scaled from your bill for remaining grid usage",
-            )
-        )
-
-    total = round(sum(l.amount for l in lines), 2)
-    return lines, total
+    notes = list(scenario.notes)
+    notes.append(
+        f"Amounts shown as monthly averages from a {months:g}-month billing period."
+    )
+    return BillScenario(
+        title=scenario.title,
+        subtitle=(
+            f"Average monthly · {monthly_baseline:g} kWh/month · "
+            f"from {months:g}-month bill"
+        ),
+        lines=lines,
+        total=round(scenario.total / months, 2),
+        units_kwh=monthly_baseline,
+        notes=notes,
+    )
 
 
-def _vnm_bill_scenario(
-    *,
+def _current_bill_scenario(
     bill: CanonicalElectricityBill,
     prefill: BillSolarPrefill,
-    tariff: TariffEngine,
-    rule: IntegrumVNMRule,
-    residual_units: float,
-    solar_credit: float,
     period_units: float,
-    monthly_equiv: float,
-    sanctioned_load_kw: float,
-    integrum_rate: float,
+    monthly_baseline: float,
 ) -> BillScenario:
-    gst = float(rule.subscription.get("gst_percent", 18.0))
-    integrum_base = solar_credit * integrum_rate
-    integrum_gst = integrum_base * gst / 100.0
-    integrum_total = integrum_base + integrum_gst
-
-    consumption_detail = (
-        f"{period_units:g} kWh for billing period"
-        if prefill.is_multi_month_period
-        else f"{period_units:g} kWh"
-    )
-    if prefill.is_multi_month_period:
-        consumption_detail += f" (~{monthly_equiv:g} kWh/month average)"
-
     lines: list[BillLineItem] = [
         BillLineItem(
             code="CONSUMPTION",
             label="Your consumption",
             amount=0,
-            detail=consumption_detail,
+            detail=(
+                f"{period_units:g} kWh for billing period "
+                f"(~{monthly_baseline:g} kWh/month average)"
+                if prefill.is_multi_month_period
+                else f"{monthly_baseline:g} kWh"
+            ),
+        )
+    ]
+    energy = _field_amount(bill, "energy_charge")
+    fixed = _field_amount(bill, "fixed_charge")
+    fppca = _field_amount(bill, "fppca")
+    other = _field_amount(bill, "other_charges")
+    tax = _field_amount(bill, "electricity_tax")
+    subsidy = _subsidy_amount(bill)
+
+    if energy is not None:
+        lines.append(
+            BillLineItem(
+                code="ENERGY",
+                label="Energy charges",
+                amount=energy,
+                detail=_qty_rate_detail(period_units, energy),
+            )
+        )
+    if fixed is not None:
+        lines.append(
+            BillLineItem(
+                code="FIXED",
+                label="Fixed charges",
+                amount=fixed,
+                detail=f"{prefill.sanctioned_load_kw:g} kW sanctioned load (from bill)",
+            )
+        )
+    if fppca:
+        lines.append(
+            BillLineItem(
+                code="FPPCA",
+                label="FPPCA",
+                amount=fppca,
+                detail=_qty_rate_detail(period_units, fppca),
+            )
+        )
+    if other:
+        lines.append(
+            BillLineItem(
+                code="OTHER",
+                label="P & G / other charges",
+                amount=other,
+                detail=None,
+            )
+        )
+    if tax:
+        lines.append(
+            BillLineItem(
+                code="TAX",
+                label="Electricity tax",
+                amount=tax,
+                detail=None,
+            )
+        )
+    if subsidy:
+        lines.append(
+            BillLineItem(
+                code="SUBSIDY",
+                label="Gruha Jyothi / subsidy",
+                amount=-subsidy,
+                detail="Reduction on your printed bill",
+            )
+        )
+
+    total = (
+        float(bill.total_amount.value)
+        if bill.total_amount.value is not None
+        else round(sum(l.amount for l in lines if l.code != "CONSUMPTION"), 2)
+    )
+
+    notes = ["Charge breakdown from your confirmed uploaded bill."]
+    if prefill.period_consumption_note:
+        notes.append(prefill.period_consumption_note)
+    if prefill.is_multi_month_period:
+        notes.append(
+            f"Average monthly consumption: {monthly_baseline:g} kWh "
+            f"(used as the VNM sales baseline)."
+        )
+
+    return BillScenario(
+        title="My Current BESCOM Bill",
+        subtitle=(
+            f"{monthly_baseline:g} kWh/month average · {prefill.sanctioned_load_kw:g} kW "
+            f"sanctioned load · Period: {prefill.billing_period or '—'}"
+        ),
+        lines=lines,
+        total=round(total, 2),
+        units_kwh=monthly_baseline,
+        notes=notes,
+    )
+
+
+def _scale_residual_bescom_with_period(
+    bill: CanonicalElectricityBill,
+    *,
+    period_units: float,
+    monthly_baseline: float,
+    residual_monthly: float,
+) -> tuple[list[BillLineItem], float, list[BillLineItem]]:
+    fixed = _field_amount(bill, "fixed_charge") or 0.0
+    detail_lines: list[BillLineItem] = []
+    lines: list[BillLineItem] = []
+
+    lines.append(
+        BillLineItem(
+            code="BESCOM_FIXED",
+            label="Fixed charges",
+            amount=round(fixed, 2),
+            detail=f"Same as your bill — {monthly_baseline:g} kWh baseline does not change load",
+        )
+    )
+    detail_lines.append(lines[-1])
+
+    if period_units <= 0:
+        return lines, round(fixed, 2), detail_lines
+
+    residual_period_equiv = residual_monthly  # charge at monthly residual using period rates
+    # Rate from period bill: amount/period_units; apply to residual_monthly kWh.
+    variable_total = 0.0
+    for attr, code, label in _VARIABLE_CHARGE_FIELDS:
+        amount = _field_amount(bill, attr)
+        if amount is None or amount == 0:
+            continue
+        rate = amount / period_units
+        scaled = round(rate * residual_monthly, 2)
+        variable_total += scaled
+        item = BillLineItem(
+            code=f"BESCOM_{code}",
+            label=label,
+            amount=scaled,
+            detail=_qty_rate_detail(residual_monthly, scaled)
+            or f"{residual_monthly:g} × ₹{rate:.2f}/kWh",
+        )
+        detail_lines.append(item)
+
+    tax = _field_amount(bill, "electricity_tax")
+    energy = _field_amount(bill, "energy_charge") or 0.0
+    pre_tax_period = energy + fixed
+    for attr, _, _ in _VARIABLE_CHARGE_FIELDS[1:]:
+        a = _field_amount(bill, attr)
+        if a:
+            pre_tax_period += a
+    scaled_tax = 0.0
+    if tax and pre_tax_period > 0:
+        # Always keep tax attributable to fixed charges (load-based, not wiped by solar).
+        tax_fixed = round(tax * (fixed / pre_tax_period), 2) if fixed > 0 else 0.0
+        # Variable portion of tax scales with residual grid kWh.
+        tax_variable_full = round(tax - tax_fixed, 2)
+        tax_variable_residual = 0.0
+        if residual_monthly > 0 and period_units > 0:
+            tax_variable_residual = round(
+                tax_variable_full * (residual_monthly / period_units), 2
+            )
+        scaled_tax = round(tax_fixed + tax_variable_residual, 2)
+        detail_parts = [f"fixed share ₹{tax_fixed:g}"]
+        if tax_variable_residual > 0:
+            detail_parts.append(f"residual grid ₹{tax_variable_residual:g}")
+        detail_lines.append(
+            BillLineItem(
+                code="BESCOM_TAX",
+                label="Electricity tax",
+                amount=scaled_tax,
+                detail=" + ".join(detail_parts),
+            )
+        )
+        variable_total += scaled_tax
+
+    residual_total = round(fixed + variable_total, 2)
+    lines.append(
+        BillLineItem(
+            code="RESIDUAL_BESCOM",
+            label="Remaining BESCOM charges",
+            amount=residual_total,
+            detail="Fixed + applicable residual grid charges (see calculation)",
+        )
+    )
+    return lines, residual_total, detail_lines
+
+
+def _vnm_month_estimate(
+    *,
+    bill: CanonicalElectricityBill,
+    monthly_baseline: float,
+    residual_monthly: float,
+    solar_monthly: float,
+    estimated_generation: float,
+    surplus_kwh: float,
+    rate: float,
+    gst_pct: float,
+    provider_name: str,
+    current_total: float,
+) -> dict:
+    # Recover period_units from bill units field
+    period_units = (
+        float(bill.units_consumed.value)
+        if bill.units_consumed.value is not None
+        else monthly_baseline
+    )
+    if period_units <= 0:
+        period_units = monthly_baseline if monthly_baseline > 0 else 1.0
+
+    _, residual_bescom, detail_lines = _scale_residual_bescom_with_period(
+        bill,
+        period_units=period_units,
+        monthly_baseline=monthly_baseline,
+        residual_monthly=residual_monthly,
+    )
+
+    # Sales monthly model: current_total is the confirmed bill total for the period.
+    # Convert BESCOM residual to a monthly figure when period spans multiple months.
+    months = period_units / monthly_baseline if monthly_baseline > 0 else 1.0
+    months = max(1.0, months)
+    # Fixed on bill is often for the period; for monthly sales compare, use
+    # current_total as the "month" when months≈1; when multi-month, baseline
+    # monthly BESCOM ≈ current_total / months.
+    #
+    # Residual_bescom computed with period rates * residual_monthly already yields
+    # a monthly-ish variable + full-period fixed. Split fixed to monthly:
+    fixed = _field_amount(bill, "fixed_charge") or 0.0
+    fixed_monthly = round(fixed / months, 2)
+    # Rebuild residual monthly = fixed_monthly + variable (already monthly from rates)
+    variable_only = round(residual_bescom - fixed, 2)
+    residual_monthly_inr = round(fixed_monthly + max(0.0, variable_only), 2)
+
+    vnm_energy = round(solar_monthly * rate, 2)
+    vnm_gst = round(vnm_energy * gst_pct / 100.0, 2)
+    vnm_service = round(vnm_energy + vnm_gst, 2)
+    total = round(residual_monthly_inr + vnm_service, 2)
+
+    lines = [
+        BillLineItem(
+            code="SOLAR_GEN",
+            label="Estimated solar generation",
+            amount=0,
+            detail=f"{estimated_generation:g} kWh/month (plant size × units/kWp)",
         ),
         BillLineItem(
             code="SOLAR_CREDIT",
-            label="Expected / scenario VNM solar credit",
+            label="Offset applied to your bill",
             amount=0,
-            detail=f"{solar_credit:g} kWh — from your VNM provider or society",
+            detail=f"{solar_monthly:g} kWh (min of generation and your consumption)",
+        ),
+        BillLineItem(
+            code="SURPLUS",
+            label="Extra solar (surplus)",
+            amount=0,
+            detail=(
+                f"{surplus_kwh:g} kWh — banks monthly; yearly settlement only"
+                if surplus_kwh > 0
+                else "None this month"
+            ),
         ),
         BillLineItem(
             code="GRID_UNITS",
-            label="Remaining grid consumption",
+            label="Remaining grid usage",
             amount=0,
-            detail=f"{residual_units:g} kWh",
+            detail=f"{residual_monthly:g} kWh",
+        ),
+        BillLineItem(
+            code="INTEGRUM_SUB",
+            label="VNM solar service",
+            amount=vnm_service,
+            detail=(
+                f"{solar_monthly:g} × ₹{rate}/kWh + {gst_pct:g}% GST "
+                f"= ₹{vnm_energy:g} + ₹{vnm_gst:g} (charged on offset only)"
+            ),
+        ),
+        BillLineItem(
+            code="BESCOM_FIXED",
+            label="Fixed charges",
+            amount=fixed_monthly,
+            detail=f"Same as your bill (monthly share) — load unchanged",
+        ),
+    ]
+    # Add residual variable BESCOM lines (energy/FPPCA/other/tax) for side-by-side compare
+    for d in detail_lines:
+        if d.code == "BESCOM_FIXED":
+            continue
+        if d.amount == 0:
+            continue
+        lines.append(d)
+
+    # Detail expansion: show formulas
+    detail = [
+        BillLineItem(
+            code="D_SOLAR",
+            label="Solar energy",
+            amount=vnm_energy,
+            detail=f"{solar_monthly:g} × ₹{rate} = ₹{vnm_energy:g}",
+        ),
+        BillLineItem(
+            code="D_GST",
+            label=f"GST {gst_pct:g}%",
+            amount=vnm_gst,
+            detail=f"₹{vnm_gst:g}",
+        ),
+        BillLineItem(
+            code="D_SERVICE",
+            label="VNM solar service",
+            amount=vnm_service,
+            detail=f"₹{vnm_service:g}",
+        ),
+        BillLineItem(
+            code="D_FIXED",
+            label="Fixed charges (monthly share)",
+            amount=fixed_monthly,
+            detail=f"₹{fixed:g} on bill ÷ {months:g} ≈ ₹{fixed_monthly:g}",
+        ),
+        *[d for d in detail_lines if d.code != "BESCOM_FIXED"],
+        BillLineItem(
+            code="D_RESIDUAL",
+            label="Remaining BESCOM total",
+            amount=residual_monthly_inr,
+            detail=f"₹{residual_monthly_inr:g}",
         ),
     ]
 
-    bescom_from_bill = _vnm_bescom_from_bill(
-        bill, period_units=period_units, residual_units=residual_units
+    return {
+        "total": total,
+        "residual_bescom": residual_monthly_inr,
+        "vnm_energy": vnm_energy,
+        "vnm_gst": vnm_gst,
+        "vnm_service_total": vnm_service,
+        "lines": lines,
+        "detail_lines": detail,
+        "fixed_monthly": fixed_monthly,
+        "variable_only": variable_only,
+        "months": months,
+    }
+
+
+def _seasonal_chart(
+    *,
+    rule: IntegrumVNMRule,
+    bill: CanonicalElectricityBill,
+    monthly_baseline: float,
+    plant_kwp: float,
+    kwh_per_kwp: float,
+    solar_monthly_fixed: float | None,
+    rate: float,
+    gst_pct: float,
+    provider_name: str,
+    current_total: float,
+    start_month: int,
+    anchor_bescom_inr: float,
+    anchor_vnm_inr: float,
+) -> list[MonthlyBillEstimate]:
+    """
+    12-month estimate starting at the bill month.
+
+    Seasonal YAML factors are normalised so the bill month is always 1.0
+    (the uploaded bill already is that month's consumption). Month 1 of the
+    chart is pinned to the same BESCOM/VNM totals as the comparison table.
+    """
+    raw = rule.seasonal_model or {}
+    factors = raw.get("factors_by_month") or {}
+    factor_map = {int(k): float(v) for k, v in factors.items()}
+    bill_month_factor = float(factor_map.get(start_month, 1.0)) or 1.0
+
+    period_units = (
+        float(bill.units_consumed.value)
+        if bill.units_consumed.value is not None
+        else monthly_baseline
     )
-    if bescom_from_bill:
-        bescom_lines, bescom_sub = bescom_from_bill
-        lines.extend(bescom_lines)
-        bescom_note = "BESCOM lines scaled from your bill: fixed unchanged, variable charges on grid kWh only."
-    else:
-        bescom = tariff.calculate(
-            discom=prefill.discom,
-            category=prefill.category,
-            as_of=prefill.as_of,
-            units=residual_units,
-            sanctioned_load_kw=sanctioned_load_kw,
-            tariff_code=prefill.tariff_code,
-        )
-        for line in bescom.lines:
-            lines.append(
-                BillLineItem(
-                    code=f"BESCOM_{line.code}",
-                    label=line.description,
-                    amount=line.amount,
-                    detail=f"{line.detail} (tariff estimate — bill lines unavailable)",
+    months_span = period_units / monthly_baseline if monthly_baseline > 0 else 1.0
+    months_span = max(1.0, months_span)
+    monthly_bescom_base = round(float(anchor_bescom_inr), 2)
+    plant_monthly_gen = round(plant_kwp * kwh_per_kwp, 2)
+
+    # Fixed + tax-on-fixed style residual floor from the detailed VNM month total:
+    # when residual grid is 0, VNM total = fixed-like BESCOM remainder + VNM service.
+    # Derive a stable "non-energy residual" from the anchor for other months.
+    fixed = _field_amount(bill, "fixed_charge") or 0.0
+    fixed_m = round(fixed / months_span, 2)
+
+    chart: list[MonthlyBillEstimate] = []
+    for i in range(12):
+        month = ((start_month - 1 + i) % 12) + 1
+        calendar_factor = float(factor_map.get(month, 1.0))
+        # Relative to bill month so uploaded month stays at baseline (1.0).
+        relative_factor = calendar_factor / bill_month_factor
+
+        if i == 0:
+            # Exact match with the side-by-side comparison totals.
+            chart.append(
+                MonthlyBillEstimate(
+                    month_index=1,
+                    month_label=f"{_MONTH_NAMES[month]}",
+                    calendar_month=month,
+                    seasonal_factor=1.0,
+                    estimated_units_kwh=monthly_baseline,
+                    estimated_bescom_bill_inr=round(anchor_bescom_inr, 2),
+                    estimated_vnm_bill_inr=round(anchor_vnm_inr, 2),
+                    estimated_saving_inr=round(anchor_bescom_inr - anchor_vnm_inr, 2),
                 )
             )
-        bescom_sub = float(bescom.estimated_total or 0)
-        bescom_note = "BESCOM lines estimated from tariff rules (bill breakdown not available)."
+            continue
 
-    lines.append(
-        BillLineItem(
-            code="INTEGRUM_SUB",
-            label=f"{rule.provider_name} VNM service charge",
-            amount=round(integrum_base, 2),
-            detail=f"{solar_credit:g} kWh × ₹{integrum_rate}/kWh (illustrative rate)",
-        )
-    )
-    lines.append(
-        BillLineItem(
-            code="INTEGRUM_GST",
-            label="GST on VNM service",
-            amount=round(integrum_gst, 2),
-            detail=f"{gst:g}% on Integrum service — not a BESCOM charge",
-        )
-    )
-    total = round(bescom_sub + integrum_total, 2)
+        est_units = round(monthly_baseline * relative_factor, 2)
+        if monthly_baseline > 0:
+            variable_share = max(0.0, monthly_bescom_base - fixed_m)
+            bescom_est = round(
+                fixed_m + variable_share * (est_units / monthly_baseline), 2
+            )
+        else:
+            bescom_est = monthly_bescom_base
 
-    return BillScenario(
-        title="My Bill With VNM",
-        subtitle=(
-            f"{period_units:g} kWh consumption · {solar_credit:g} kWh expected credit · "
-            f"{residual_units:g} kWh from grid · {sanctioned_load_kw:g} kW sanctioned load"
-        ),
-        lines=lines,
-        total=total,
-        units_kwh=period_units,
-        notes=[
-            bescom_note,
-            "Integrum charge is for expected solar kWh credited — separate from BESCOM FPPCA/P&G.",
-            "Gruha Jyothi subsidy is not applied on the VNM estimate.",
-            "Expected solar credit is a scenario input — not calculated from your bill.",
-        ],
-    )
+        if solar_monthly_fixed is not None:
+            solar = round(min(est_units, solar_monthly_fixed), 2)
+        else:
+            solar = round(min(est_units, plant_monthly_gen), 2)
+        residual = round(max(0.0, est_units - solar), 2)
+
+        vnm_energy = round(solar * rate, 2)
+        vnm_gst = round(vnm_energy * gst_pct / 100.0, 2)
+        vnm_service = vnm_energy + vnm_gst
+
+        if monthly_baseline > 0:
+            variable_share = max(0.0, monthly_bescom_base - fixed_m)
+            residual_var = round(variable_share * (residual / monthly_baseline), 2)
+        else:
+            residual_var = 0.0
+        # Keep fixed charges; approximate tax-on-fixed from anchor when fully offset.
+        tax_fixed_approx = 0.0
+        if plant_monthly_gen >= monthly_baseline - 1e-6 or (
+            solar_monthly_fixed is not None and solar_monthly_fixed >= monthly_baseline
+        ):
+            bill_service = monthly_baseline * rate * (1 + gst_pct / 100.0)
+            tax_fixed_approx = round(max(0.0, anchor_vnm_inr - fixed_m - bill_service), 2)
+        residual_bescom = round(fixed_m + tax_fixed_approx + residual_var, 2)
+        vnm_est = round(residual_bescom + vnm_service, 2)
+
+        chart.append(
+            MonthlyBillEstimate(
+                month_index=i + 1,
+                month_label=f"{_MONTH_NAMES[month]}",
+                calendar_month=month,
+                seasonal_factor=round(relative_factor, 4),
+                estimated_units_kwh=est_units,
+                estimated_bescom_bill_inr=bescom_est,
+                estimated_vnm_bill_inr=vnm_est,
+                estimated_saving_inr=round(bescom_est - vnm_est, 2),
+            )
+        )
+    return chart

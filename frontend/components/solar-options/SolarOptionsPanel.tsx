@@ -3,11 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiGet, apiPost } from "@/lib/api";
 import { formatCurrency } from "@/lib/bill-analysis";
-import type {
-  CompareSolarOptionsPayload,
-  SolarOptionsComparison,
-  SolarOptionsResponse,
-} from "@/lib/solar-options";
+import type { CompareSolarOptionsPayload, SolarOptionsComparison, SolarOptionsResponse, } from "@/lib/solar-options";
 import { SolarIntelligenceReportView } from "@/components/solar-options/SolarIntelligenceReport";
 import { VNMComparisonView } from "@/components/solar-options/VNMComparisonView";
 
@@ -20,11 +16,16 @@ export function SolarOptionsPanel({ analysisId, enabled = true }: Props) {
   const [loading, setLoading] = useState(true);
   const [recalculating, setRecalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [comparison, setComparison] = useState<SolarOptionsComparison | null>(null);
+  const [comparison, setComparison] = useState<SolarOptionsComparison | null>(
+    null
+  );
 
   const loadComparison = useCallback(
-    async (expectedCredit?: number) => {
-      const isInitial = expectedCredit === undefined;
+    async (opts?: {
+      plantKwp?: number;
+      expectedCredit?: number;
+    }) => {
+      const isInitial = opts === undefined;
       if (isInitial) {
         setLoading(true);
       } else {
@@ -35,8 +36,11 @@ export function SolarOptionsPanel({ analysisId, enabled = true }: Props) {
         include_vnm: true,
         include_individual_solar: false,
         include_gnm: false,
-        ...(expectedCredit !== undefined
-          ? { expected_vnm_solar_credit_kwh: expectedCredit }
+        ...(opts?.plantKwp !== undefined
+          ? { illustrative_plant_kwp: opts.plantKwp }
+          : {}),
+        ...(opts?.expectedCredit !== undefined
+          ? { expected_vnm_solar_credit_kwh: opts.expectedCredit }
           : {}),
       };
       try {
@@ -56,7 +60,9 @@ export function SolarOptionsPanel({ analysisId, enabled = true }: Props) {
             // keep original error
           }
         }
-        setError(e instanceof Error ? e.message : "Could not load VNM comparison.");
+        setError(
+          e instanceof Error ? e.message : "Could not load VNM comparison."
+        );
       } finally {
         if (isInitial) {
           setLoading(false);
@@ -116,30 +122,39 @@ export function SolarOptionsPanel({ analysisId, enabled = true }: Props) {
         <h2>VNM bill comparison</h2>
         <p>
           Based on your confirmed bill ({unitsLabel},{" "}
-          {prefill.sanctioned_load_kw} kW sanctioned load,{" "}
-          {formatCurrency(prefill.current_monthly_bill_inr)}). Enter expected
-          VNM solar credit from your provider to compare with{" "}
-          <strong>Virtual Net Metering via Integrum Energy</strong>.
+          {prefill.sanctioned_load_kw} kW,{" "}
+          {formatCurrency(prefill.current_monthly_bill_inr)}). Illustrative
+          Integrum VNM estimate — not an actual allocation.
         </p>
       </div>
 
-      {error && <div className="alert bad" role="alert">{error}</div>}
+      {error && (
+        <div className="alert bad" role="alert">
+          {error}
+        </div>
+      )}
 
       {comparison.vnm_comparison && (
         <VNMComparisonView
           comparison={comparison.vnm_comparison}
           recalculating={recalculating}
-          onApplyCredit={(credit) => void loadComparison(credit)}
+          onPlantChange={(plantKwp) =>
+            void loadComparison({ plantKwp })
+          }
+          onApplyQuote={(credit) =>
+            void loadComparison({ expectedCredit: credit })
+          }
         />
       )}
 
       {vnmOption?.intelligence_report && (
-        <div className="solar-intelligence-block">
+        <details className="solar-intelligence-block">
+          <summary>How we estimated your savings</summary>
           <SolarIntelligenceReportView
             report={vnmOption.intelligence_report}
             highlighted
           />
-        </div>
+        </details>
       )}
 
       {comparison.disclaimer && (

@@ -76,6 +76,30 @@ export type BillScenario = {
   notes: string[];
 };
 
+export type MonthlyBillEstimate = {
+  month_index: number;
+  month_label: string;
+  calendar_month: number;
+  seasonal_factor: number;
+  estimated_units_kwh: number;
+  estimated_bescom_bill_inr: number;
+  estimated_vnm_bill_inr: number;
+  estimated_saving_inr: number;
+};
+
+export type VNMMethodology = {
+  monthly_baseline_kwh: number;
+  coverage_fraction: number;
+  coverage_label: string;
+  coverage_source: string;
+  illustrative_plant_kwp: number | null;
+  monthly_kwh_per_kwp: number | null;
+  illustrative_rate_inr_per_kwh: number;
+  gst_percent: number;
+  seasonal_model_label: string;
+  steps: string[];
+};
+
 export type VNMSetupCost = {
   label: string;
   amount_inr: number;
@@ -100,6 +124,25 @@ export type VNMComparison = {
   scenario_label: string;
   solar_kwh_credited: number;
   residual_grid_kwh: number;
+  estimated_generation_kwh: number;
+  surplus_kwh: number;
+  illustrative_coverage_fraction: number;
+  coverage_source: string;
+  illustrative_plant_kwp: number;
+  monthly_kwh_per_kwp: number;
+  plant_slider_min_kwp: number;
+  plant_slider_max_kwp: number;
+  plant_slider_step_kwp: number;
+  default_plant_kwp: number;
+  surplus_note: string | null;
+  illustrative_rate_inr_per_kwh: number;
+  gst_percent: number;
+  vnm_energy_cost_inr: number;
+  vnm_gst_inr: number;
+  vnm_service_total_inr: number;
+  residual_bescom_charges_inr: number;
+  has_gruha_jyothi: boolean;
+  gruha_jyothi_note: string | null;
   period_difference_inr: number;
   monthly_difference_inr: number;
   annual_difference_inr: number;
@@ -112,6 +155,12 @@ export type VNMComparison = {
   annual_increase_inr: number;
   current_bill: BillScenario;
   vnm_bill: BillScenario;
+  calculation_detail_lines: BillLineItem[];
+  monthly_chart: MonthlyBillEstimate[];
+  methodology: VNMMethodology | null;
+  cta_primary: string;
+  cta_secondary: string;
+  cta_url: string;
   assumptions: string[];
   disclaimer: string;
 };
@@ -161,6 +210,8 @@ export type CompareSolarOptionsPayload = {
   include_vnm?: boolean;
   include_gnm?: boolean;
   expected_vnm_solar_credit_kwh?: number;
+  illustrative_plant_kwp?: number;
+  illustrative_coverage_fraction?: number;
 };
 
 /** 1 sq ft ≈ 0.092903 m² */

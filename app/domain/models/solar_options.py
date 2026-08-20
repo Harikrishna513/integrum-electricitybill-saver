@@ -55,9 +55,26 @@ class CompareSolarOptionsRequest(BaseModel):
         default=None,
         ge=0,
         description=(
-            "Expected VNM solar credit for the billing period (kWh), from the "
-            "VNM provider/society — not derived from consumption or sanctioned load."
+            "Advanced: expected solar credit for the billing period (kWh) from a "
+            "provider quote. Overrides plant-size explorer when set."
         ),
+    )
+    illustrative_plant_kwp: float | None = Field(
+        default=None,
+        ge=0.5,
+        le=20.0,
+        description=(
+            "Illustrative VNM plant size (kWp). Estimated monthly solar units = "
+            "kWp × configured kWh/kWp (default 120). Capped at consumption. "
+            "Default sizes to ~100% of monthly consumption."
+        ),
+    )
+    # Deprecated — prefer illustrative_plant_kwp. Kept for older clients.
+    illustrative_coverage_fraction: float | None = Field(
+        default=None,
+        ge=0.0,
+        le=1.0,
+        description="Deprecated. Prefer illustrative_plant_kwp.",
     )
 
 
