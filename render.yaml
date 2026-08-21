@@ -1,0 +1,84 @@
+# Render Blueprint — one-click deploy for this monorepo
+# Dashboard: New → Blueprint → connect this GitHub repo
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Creates two free web services from the same folder structure:
+#   1) API  — FastAPI at repo root
+#   2) Web  — Next.js in /frontend
+#
+# After first deploy, open each service → Environment and confirm secrets
+# (Gemini / Mistral) were entered when prompted.
+
+services:
+  # ── Backend (FastAPI) ──────────────────────────────────────────────
+  - type: web
+    name: bescom-bill-saver-api
+    runtime: python
+    plan: free
+    region: oregon
+    branch: main
+    autoDeployTrigger: commit
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: DATABASE_URL
+        value: sqlite:///./data/bescom_bill_saver.db
+      - key: UPLOAD_DIR
+        value: ./data/uploads
+      - key: DOCS_DIR
+        value: ./data/Docs
+      - key: MAX_UPLOAD_BYTES
+        value: "10485760"
+      - key: BILL_EXTRACTION_PROVIDER
+        value: mistral_ocr
+      - key: BILL_EXTRACTION_FALLBACK
+        value: "true"
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: MISTRAL_OCR_MODEL
+        value: mistral-ocr-latest
+      # Prompted in Render UI on first Blueprint create (do not commit secrets)
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      # Public API URL (this service)
+      - key: API_PUBLIC_URL
+        fromService:
+          name: bescom-bill-saver-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+      # Allow browser calls from the Next.js service
+      - key: CORS_ORIGINS
+        fromService:
+          name: bescom-bill-saver-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
+
+  # ── Frontend (Next.js) ─────────────────────────────────────────────
+  - type: web
+    name: bescom-bill-saver-web
+    runtime: node
+    plan: free
+    region: oregon
+    branch: main
+    rootDir: frontend
+    autoDeployTrigger: commit
+    buildCommand: npm install && npm run build
+    startCommand: npm run start -- -H 0.0.0.0 -p $PORT
+    envVars:
+      - key: NODE_VERSION
+        value: "20.18.0"
+      # Baked into the Next.js client at build time
+      - key: NEXT_PUBLIC_API_BASE
+        fromService:
+          name: bescom-bill-saver-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_URL
